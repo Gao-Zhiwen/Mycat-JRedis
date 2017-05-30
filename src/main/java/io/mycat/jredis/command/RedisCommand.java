@@ -1,6 +1,6 @@
-package io.mycat.jredis.server;
+package io.mycat.jredis.command;
 
-import io.mycat.jredis.server.impl.GetCommand;
+import io.mycat.jredis.command.impl.GetCommand;
 
 /**
  * Desc:redis 命令的枚举类

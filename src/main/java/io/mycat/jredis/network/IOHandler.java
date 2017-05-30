@@ -1,5 +1,7 @@
 package io.mycat.jredis.network;
 
+import io.mycat.jredis.command.RedisParser;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;

@@ -1,4 +1,4 @@
-package io.mycat.jredis.server;
+package io.mycat.jredis.command;
 
 /**
  * Desc:从命令中判断命令的键参数

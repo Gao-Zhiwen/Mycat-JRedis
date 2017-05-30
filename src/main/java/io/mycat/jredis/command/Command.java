@@ -1,4 +1,4 @@
-package io.mycat.jredis.server;
+package io.mycat.jredis.command;
 
 import io.mycat.jredis.client.RedisClient;
 

@@ -1,7 +1,7 @@
-package io.mycat.jredis.server.impl;
+package io.mycat.jredis.command.impl;
 
 import io.mycat.jredis.client.RedisClient;
-import io.mycat.jredis.server.Command;
+import io.mycat.jredis.command.Command;
 
 /**
  * Desc:

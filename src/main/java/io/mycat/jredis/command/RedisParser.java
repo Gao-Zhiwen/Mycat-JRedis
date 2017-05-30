@@ -1,4 +1,4 @@
-package io.mycat.jredis.network;
+package io.mycat.jredis.command;
 
 import java.nio.ByteBuffer;
 
