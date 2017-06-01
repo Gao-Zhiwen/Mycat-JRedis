@@ -1,10 +1,10 @@
 package io.mycat.jredis.struct;
 
 /**
- * Desc:jredis的字符串类
- * <p/>Date: 28/05/2017
- * <br/>Time: 20:46
- * <br/>User: gaozhiwen
+ * Desc: jredis的字符串类
+ *
+ * @date: 01/06/2017
+ * @author: gaozhiwen
  */
 public class Sds {
     public static final int SDS_MAX_PREALLOC = 1024 * 1024;
@@ -12,25 +12,27 @@ public class Sds {
     private Sds() {
     }
 
-    private SdsHdr sdsHdr;
+    private int len;
+    private int free;
+    private String buf;
 
     /*
      * 返回 sds 实际保存的字符串的长度
      */
-    //    public int getLength() {
-    //        return this.len;
-    //    }
+    public int getLength() {
+        return this.len;
+    }
 
-        /*
-         * 返回 sds 可用空间的长度
-         */
-    //    public int getFree() {
-    //        return this.free;
-    //    }
+    /*
+     * 返回 sds 可用空间的长度
+     */
+    public int getFree() {
+        return this.free;
+    }
 
-    //    public String getBuf() {
-    //        return this.buf;
-    //    }
+    public String getBuf() {
+        return this.buf;
+    }
 
     /**
      * 根据给定的初始化字符串和字符串长度创建一个新的sds

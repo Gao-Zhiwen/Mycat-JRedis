@@ -1,10 +1,10 @@
 package io.mycat.jredis.struct;
 
 /**
- * Desc:Redis 对象
- * <p/>Date: 30/05/2017
- * <br/>Time: 23:17
- * <br/>User: gaozhiwen
+ * Desc: Redis 对象
+ *
+ * @date: 01/06/2017
+ * @author: gaozhiwen
  */
 public class RedisObject {
     // 类型

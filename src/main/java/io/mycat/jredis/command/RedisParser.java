@@ -2,12 +2,6 @@ package io.mycat.jredis.command;
 
 import java.nio.ByteBuffer;
 
-/**
- * Desc:
- * <p/>Date: 30/05/2017
- * <br/>Time: 18:00
- * <br/>User: gaozhiwen
- */
 public class RedisParser {
     public static void parse(ByteBuffer buffer, int lastPosition) {
         String line = readLine(buffer, lastPosition);

@@ -9,12 +9,6 @@ import java.nio.channels.SocketChannel;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Desc:
- * <p/>Date: 2017/3/28
- * <br/>Time: 21:34
- * <br/>User: gaozhiwen
- */
 public class Acceptor extends Thread {
     private Reactor[] reactors;
     private ServerSocketChannel serverSocketChannel;
@@ -29,8 +23,7 @@ public class Acceptor extends Thread {
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
     }
 
-    @Override
-    public void run() {
+    @Override public void run() {
         Set<SelectionKey> selectionKeys = null;
         while (true) {
             try {

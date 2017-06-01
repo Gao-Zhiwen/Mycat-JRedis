@@ -11,12 +11,6 @@ import io.mycat.jredis.struct.Sds;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Desc:
- * <p/>Date: 30/05/2017
- * <br/>Time: 21:58
- * <br/>User: gaozhiwen
- */
 public class RedisServer {
     // 配置文件的绝对路径
     private String configFile;

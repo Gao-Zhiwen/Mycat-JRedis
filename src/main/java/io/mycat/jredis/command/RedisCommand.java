@@ -3,10 +3,10 @@ package io.mycat.jredis.command;
 import io.mycat.jredis.command.impl.GetCommand;
 
 /**
- * Desc:redis 命令的枚举类
- * <p/>Date: 30/05/2017
- * <br/>Time: 15:06
- * <br/>User: gaozhiwen
+ * Desc: redis 命令的枚举类
+ *
+ * @date: 01/06/2017
+ * @author: gaozhiwen
  */
 public enum RedisCommand {
     GET("get", new GetCommand(), 2, "r", 0, null, 1, 1, 1, 0, 0);

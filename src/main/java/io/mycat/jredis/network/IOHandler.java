@@ -10,12 +10,6 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 
-/**
- * Desc:
- * <p/>Date: 2017/3/29
- * <br/>Time: 21:02
- * <br/>User: gaozhiwen
- */
 public class IOHandler {
     private ExecutorService executorService;
     private SelectionKey selectionKey;

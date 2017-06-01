@@ -1,11 +1,5 @@
 package io.mycat.jredis.operation;
 
-/**
- * Desc:
- * <p/>Date: 30/05/2017
- * <br/>Time: 23:18
- * <br/>User: gaozhiwen
- */
 public class RedisOpArray {
     private RedisOp ops;
     private int numops;

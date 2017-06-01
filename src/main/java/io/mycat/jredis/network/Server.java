@@ -4,12 +4,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Desc:
- * <p/>Date: 2017/3/28
- * <br/>Time: 21:34
- * <br/>User: gaozhiwen
- */
 public class Server {
     private static final int PORT = 6379;
 

@@ -1,11 +1,5 @@
 package io.mycat.jredis.client;
 
-/**
- * Desc:
- * <p/>Date: 30/05/2017
- * <br/>Time: 14:55
- * <br/>User: gaozhiwen
- */
 public class RedisClient {
     //    // 套接字描述符
     //    private int fd;

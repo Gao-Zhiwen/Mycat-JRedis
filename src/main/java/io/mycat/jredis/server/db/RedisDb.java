@@ -2,12 +2,6 @@ package io.mycat.jredis.server.db;
 
 import java.util.Map;
 
-/**
- * Desc:
- * <p/>Date: 30/05/2017
- * <br/>Time: 21:59
- * <br/>User: gaozhiwen
- */
 public class RedisDb {
     // 数据库键空间，保存着数据库中的所有键值对
     private Map dict;

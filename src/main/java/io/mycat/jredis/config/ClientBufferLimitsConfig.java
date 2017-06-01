@@ -1,10 +1,10 @@
 package io.mycat.jredis.config;
 
 /**
- * Desc:客户端缓冲区限制
- * <p/>Date: 30/05/2017
- * <br/>Time: 23:13
- * <br/>User: gaozhiwen
+ * Desc: 客户端缓冲区限制
+ *
+ * @date: 01/06/2017
+ * @author: gaozhiwen
  */
 public class ClientBufferLimitsConfig {
     // 硬限制

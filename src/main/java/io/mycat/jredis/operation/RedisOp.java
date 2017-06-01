@@ -3,12 +3,6 @@ package io.mycat.jredis.operation;
 import io.mycat.jredis.command.RedisCommand;
 import io.mycat.jredis.struct.RedisObject;
 
-/**
- * Desc:
- * <p/>Date: 30/05/2017
- * <br/>Time: 23:15
- * <br/>User: gaozhiwen
- */
 public class RedisOp {
     // 参数
     private RedisObject argv;

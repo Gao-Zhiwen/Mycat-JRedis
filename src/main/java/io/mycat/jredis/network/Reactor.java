@@ -7,12 +7,6 @@ import java.nio.channels.SocketChannel;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-/**
- * Desc:
- * <p/>Date: 2017/3/28
- * <br/>Time: 21:37
- * <br/>User: gaozhiwen
- */
 public class Reactor extends Thread {
     private final ExecutorService executorService;
     private final Selector selector;
@@ -30,8 +24,7 @@ public class Reactor extends Thread {
         }
     }
 
-    @Override
-    public void run() {
+    @Override public void run() {
         Set<SelectionKey> selectionKeys = null;
         while (true) {
             try {

@@ -1,10 +1,10 @@
 package io.mycat.jredis.config;
 
 /**
- * Desc:服务器的保存条件
- * <p/>Date: 30/05/2017
- * <br/>Time: 23:14
- * <br/>User: gaozhiwen
+ * Desc: 服务器的保存条件
+ *
+ * @date: 01/06/2017
+ * @author: gaozhiwen
  */
 public class SaveParam {
     // 多少秒之内
