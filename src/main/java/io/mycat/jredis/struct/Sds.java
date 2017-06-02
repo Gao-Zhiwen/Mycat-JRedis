@@ -34,6 +34,10 @@ public class Sds {
         return this.buf;
     }
 
+    public void setBuf(String buf) {
+        this.buf = buf;
+    }
+
     /**
      * 根据给定的初始化字符串和字符串长度创建一个新的sds
      *
@@ -44,9 +48,9 @@ public class Sds {
 
     public static Sds sdsNewLen(final String initStr, int initLen) {
         Sds sds = new Sds();
-        //        sds.buf = initStr;
-        //        sds.len = initLen;
-        //        sds.free = (initStr == null) ? initLen : (initLen - initStr.length());
+        sds.buf = initStr;
+        sds.len = initLen;
+        sds.free = (initStr == null) ? initLen : (initLen - initStr.length());
         return sds;
     }
 

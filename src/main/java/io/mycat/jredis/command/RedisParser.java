@@ -1,46 +1,99 @@
 package io.mycat.jredis.command;
 
-import java.nio.ByteBuffer;
+import io.mycat.jredis.client.RedisClient;
+import io.mycat.jredis.client.ReqType;
+import io.mycat.jredis.message.RedisState;
+import io.mycat.jredis.struct.Sds;
+
+import java.util.Arrays;
+import java.util.jar.Pack200;
 
 public class RedisParser {
-    public static void parse(ByteBuffer buffer, int lastPosition) {
-        String line = readLine(buffer, lastPosition);
-        if (line == null || line.length() <= 0) {
-            return;
+    public static void processInputBuffer(RedisClient redisClient) {
+        Sds queryBuf = redisClient.getQueryBuf();
+        while (queryBuf.getLength() > 0) {
+            //todo check if blocked or closed
+
+            //获取请求的类型
+            if (redisClient.getReqType() == 0) {
+                if (queryBuf.getBuf().charAt(0) == '*') {
+                    redisClient.setReqType(ReqType.REDIS_REQ_MULTIBULK);
+                } else {
+                    redisClient.setReqType(ReqType.REDIS_REQ_INLINE);
+                }
+            }
+
+            //根据不同类型调用不同函数解析参数
+            if (redisClient.getReqType() == ReqType.REDIS_REQ_INLINE) {
+                if (processInlineBuffer(redisClient) != RedisState.REDIS_OK) {
+                    break;
+                }
+            } else if (redisClient.getReqType() == ReqType.REDIS_REQ_MULTIBULK) {
+                if (processMultibulkBuffer(redisClient) != RedisState.REDIS_OK) {
+                    break;
+                }
+            } else {
+
+            }
         }
-        System.out.println("read line: " + line);
-        handleLine(line);
-        handleLine(readLine(buffer, lastPosition + line.length() + 2));
     }
 
-    private static void handleLine(String line) {
-        char c = line.charAt(0);
-        switch (c) {
-            case '*':
-                System.out.println("*****: " + line.substring(1));
-                break;
-            case '$':
-                System.out.println("$$$$$: " + line.substring(1));
-                break;
-            default:
-                System.out.println("default: " + line);
-                break;
-        }
+    private static int processInlineBuffer(RedisClient redisClient) {
+        Sds queryBuf = redisClient.getQueryBuf();
+        queryBuf.setBuf("");
+
+        //todo handle \r\n
+
+        //取出\r\n前的内容
+
+        return RedisState.REDIS_OK;
     }
 
-    private static String readLine(ByteBuffer buffer, int lastPosition) {
-        String readLine = null;
-        int newPosition = buffer.position();
-        for (int i = lastPosition; i < newPosition; i++) {
-            if (buffer.get(i) == 13) {
-                //读取到换行
-                byte[] bytes = new byte[i - lastPosition];
-                buffer.get(bytes);
-                readLine = new String(bytes);
-                break;
+
+    //按照协议的格式从querybuf中读出参数的值
+    private static int processMultibulkBuffer(RedisClient redisClient) {
+        String newLine = null;
+        int pos = 0;
+        long ll = 0;
+
+        String buf = redisClient.getQueryBuf().getBuf();
+        if (redisClient.getMultiBulkLen() == 0) {
+            newLine = buf.substring(0, buf.indexOf("\r"));
+
+            if (newLine == null) {
+                //todo
+                return RedisState.REDIS_ERR;
+            }
+
+            ll = Long.parseLong(newLine.substring(1));
+            pos = newLine.length() + 2;
+            redisClient.setMultiBulkLen(ll);
+        }
+
+        for (long i = 0, len = redisClient.getMultiBulkLen(); i < len; i++) {
+            if (redisClient.getMultiBulkLen() == -1) {
+                newLine = buf.substring(pos + 2, buf.indexOf("\r", pos + 2));
+
+                ll = Long.parseLong(newLine.substring(1));
+
+                pos += newLine.length() + 2;
+                redisClient.setBulkLen(ll);
+            }
+
+            {
+                if (pos == 0
+                        && redisClient.getQueryBuf().getLength() == redisClient.getBulkLen() + 2) {
+
+                } else {
+//                    redisClient.getArgc()
+                    pos += redisClient.getBulkLen() + 2;
+                }
+                redisClient.setBulkLen(-1);
+                redisClient.setMultiBulkLen(redisClient.getMultiBulkLen() - 1);
             }
         }
 
-        return readLine;
+        redisClient.getQueryBuf().setBuf(buf.substring(pos));
+        return RedisState.REDIS_OK;
     }
 }

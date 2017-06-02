@@ -1,6 +1,8 @@
 package io.mycat.jredis.network;
 
+import io.mycat.jredis.client.RedisClient;
 import io.mycat.jredis.command.RedisParser;
+import io.mycat.jredis.struct.Sds;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,16 +12,17 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 
-public class IOHandler {
+public class RedisHandler {
     private ExecutorService executorService;
     private SelectionKey selectionKey;
     private SocketChannel socketChannel;
     private ByteBuffer readBuffer;
     private ByteBuffer writeBuffer;
-    private LinkedList<ByteBuffer> writeBufferList = new LinkedList<>();
+    private LinkedList<ByteBuffer> writeBufferList = new LinkedList();
     private int lastPosition;
+    private RedisClient redisClient;
 
-    public IOHandler(final Selector selector, SocketChannel socketChannel,
+    public RedisHandler(final Selector selector, SocketChannel socketChannel,
             ExecutorService executorService) throws IOException {
         this.executorService = executorService;
         this.socketChannel = socketChannel;
@@ -32,6 +35,9 @@ public class IOHandler {
 
     private void onConnected() throws IOException {
         System.out.println("onconnected");
+
+        this.redisClient = new RedisClient();
+
         socketChannel.write(ByteBuffer.wrap("+OK\r\n".getBytes()));
     }
 
@@ -40,24 +46,36 @@ public class IOHandler {
     }
 
     public void doRead() throws IOException {
-        int num = socketChannel.read(readBuffer);
-        if (num == -1) {
-            onClosed();
-            return;
-        }
-        if (num == 0) {
-            //error
-            return;
-        }
+        while (true) {
+            int num = socketChannel.read(readBuffer);
+            if (num == -1) {
+                onClosed();
+                return;
+            }
+            if (num == 0) {
+                //error
+                return;
+            }
 
-        RedisParser.parse(readBuffer, lastPosition);
-        lastPosition += num;
+            byte[] byteBuf = new byte[num];
+            for (int i = 0; i < num; i++) {
+                byteBuf[i] = readBuffer.get(lastPosition + i);
+            }
 
-        if (lastPosition > readBuffer.capacity() / 2) {
-            readBuffer.position(lastPosition + 2);
-            readBuffer.limit(lastPosition);
-            readBuffer.compact();
-            lastPosition = 0;
+            String requestStr = new String(byteBuf);
+            System.out.println("request str: " + requestStr);
+
+            redisClient.setQueryBuf(Sds.sdsNew(requestStr));
+            RedisParser.processInputBuffer(redisClient);
+            lastPosition += num;
+//            readBuffer.position(lastPosition);
+
+            if (lastPosition > readBuffer.capacity() / 2) {
+                readBuffer.position(lastPosition + 2);
+                readBuffer.limit(lastPosition);
+                readBuffer.compact();
+                lastPosition = 0;
+            }
         }
     }
 

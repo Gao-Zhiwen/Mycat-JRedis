@@ -97,3 +97,7 @@ Redis中的11大优秀设计:
 9.long long 类型转为String类型方法(http://blog.csdn.net/androidlushangderen/article/details/40649623)
 10.正则表达式的实现算法(http://blog.csdn.net/androidlushangderen/article/details/40649623)
 11.Redis的drand48()随机算法重实现(http://blog.csdn.net/androidlushangderen/article/details/40582189)
+
+networking.c
+当有连接事件的时候,调用acceptTcpHandler
+当有可读事件的时候,调用readQueryFromClient

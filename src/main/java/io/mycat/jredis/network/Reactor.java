@@ -18,7 +18,7 @@ public class Reactor extends Thread {
 
     public void registClient(SocketChannel socketChannel) {
         try {
-            new IOHandler(selector, socketChannel, executorService);
+            new RedisHandler(selector, socketChannel, executorService);
         } catch (IOException e) {
             doClose(socketChannel);
         }
@@ -33,11 +33,11 @@ public class Reactor extends Thread {
                 for (SelectionKey selectionKey : selectionKeys) {
                     if (selectionKey.isValid()) {
                         try {
-                            IOHandler ioHandler = (IOHandler) selectionKey.attachment();
+                            RedisHandler redisHandler = (RedisHandler) selectionKey.attachment();
                             if (selectionKey.isReadable()) {
-                                ioHandler.doRead();
+                                redisHandler.doRead();
                             } else if (selectionKey.isWritable()) {
-                                ioHandler.doWrite();
+                                redisHandler.doWrite();
                             }
                         } catch (IOException e) {
                             doClose((SocketChannel) selectionKey.channel());
