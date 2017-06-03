@@ -2,11 +2,9 @@ package io.mycat.jredis.command;
 
 import io.mycat.jredis.client.RedisClient;
 import io.mycat.jredis.client.ReqType;
+import io.mycat.jredis.message.RedisMessage;
 import io.mycat.jredis.message.RedisState;
 import io.mycat.jredis.struct.Sds;
-
-import java.util.Arrays;
-import java.util.jar.Pack200;
 
 public class RedisParser {
     public static void processInputBuffer(RedisClient redisClient) {
@@ -16,7 +14,7 @@ public class RedisParser {
 
             //获取请求的类型
             if (redisClient.getReqType() == 0) {
-                if (queryBuf.getBuf().charAt(0) == '*') {
+                if (queryBuf.getBuf().charAt(0) == RedisMessage.REDIS_STAR) {
                     redisClient.setReqType(ReqType.REDIS_REQ_MULTIBULK);
                 } else {
                     redisClient.setReqType(ReqType.REDIS_REQ_INLINE);
@@ -58,7 +56,7 @@ public class RedisParser {
 
         String buf = redisClient.getQueryBuf().getBuf();
         if (redisClient.getMultiBulkLen() == 0) {
-            newLine = buf.substring(0, buf.indexOf("\r"));
+            newLine = buf.substring(0, buf.indexOf(RedisMessage.CRLF));//todo trim?
 
             if (newLine == null) {
                 //todo
@@ -72,7 +70,7 @@ public class RedisParser {
 
         for (long i = 0, len = redisClient.getMultiBulkLen(); i < len; i++) {
             if (redisClient.getMultiBulkLen() == -1) {
-                newLine = buf.substring(pos + 2, buf.indexOf("\r", pos + 2));
+                newLine = buf.substring(pos, buf.indexOf(RedisMessage.CRLF, pos));
 
                 ll = Long.parseLong(newLine.substring(1));
 
@@ -85,7 +83,7 @@ public class RedisParser {
                         && redisClient.getQueryBuf().getLength() == redisClient.getBulkLen() + 2) {
 
                 } else {
-//                    redisClient.getArgc()
+                    //                    redisClient.getArgc()
                     pos += redisClient.getBulkLen() + 2;
                 }
                 redisClient.setBulkLen(-1);

@@ -2,6 +2,7 @@ package io.mycat.jredis.client;
 
 import io.mycat.jredis.command.RedisCommand;
 import io.mycat.jredis.server.db.RedisDb;
+import io.mycat.jredis.struct.RedisObject;
 import io.mycat.jredis.struct.Sds;
 
 import java.util.List;
@@ -18,19 +19,19 @@ public class RedisClient {
     private int dictId;
 
     // 客户端的名字
-    //        private robj name;             /* As set by CLIENT SETNAME */
+    private RedisObject name;
 
     // 查询缓冲区
     private Sds queryBuf;
 
     // 查询缓冲区长度峰值
-    private long queryBufPeak;   /* Recent (100ms or more) peak of querybuf size */
+    private long queryBufPeak;
 
     // 参数数量
     private int argc;
 
     // 参数对象数组
-    //        private robj argv;
+    private RedisObject argv;
 
     // 记录被客户端执行的命令
     private RedisCommand cmd;
@@ -40,86 +41,85 @@ public class RedisClient {
     private int reqType;
 
     // 剩余未读取的命令内容数量
-    private long multiBulkLen;       /* number of multi bulk arguments left to read */
+    private long multiBulkLen;
 
     // 命令内容的长度
-    private long bulkLen;           /* length of bulk argument in multi bulk request */
+    private long bulkLen;
 
     // 回复链表
     private List reply;
 
     // 回复链表中对象的总大小
-    private long replyBytes; /* Tot bytes of objects in reply list */
+    private long replyBytes;
 
     // 已发送字节，处理 short write 用
-    private int sentLen;            /* Amount of bytes already sent in the current
-                                   buffer or object being sent. */
+    private int sentLen;
 
     // 创建客户端的时间
-    private long cTime;           /* Client creation time */
+    private long cTime;
 
     // 客户端最后一次和服务器互动的时间
-    private long lastInteraction; /* time of the last interaction, used for timeout */
+    private long lastInteraction;
 
     // 客户端的输出缓冲区超过软性限制的时间
     private long obufSoftLimitReachedTime;
 
     // 客户端状态标志
-    private int flags;              /* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */
+    private int flags;
 
     // 当 server.requirepass 不为 NULL 时
     // 代表认证的状态
     // 0 代表未认证， 1 代表已认证
-    private int authenticated;      /* when requirepass is non-NULL */
+    private int authenticated;
 
     // 复制状态
-    private int replState;          /* replication state if this is a slave */
+    private int replState;
     // 用于保存主服务器传来的 RDB 文件的文件描述符
-    private int replDBFd;           /* replication DB file descriptor */
+    private int replDBFd;
 
     // 读取主服务器传来的 RDB 文件的偏移量
-    private long repldBoff;        /* replication DB file offset */
+    private long repldBoff;
     // 主服务器传来的 RDB 文件的大小
-    private long replDBSize;       /* replication DB file size */
+    private long replDBSize;
 
-    private Sds replPreamble;       /* replication DB preamble. */
+    private Sds replPreamble;
 
     // 主服务器的复制偏移量
-    private long replOff;      /* replication offset if this is our master */
+    private long replOff;
     // 从服务器最后一次发送 REPLCONF ACK 时的偏移量
-    private long replAckOff; /* replication ack offset, if this is a slave */
+    private long replAckOff;
     // 从服务器最后一次发送 REPLCONF ACK 的时间
-    private long replAckTime;/* replication ack time, if this is a slave */
+    private long replAckTime;
     // 主服务器的 master run ID
     // 保存在客户端，用于执行部分重同步
-    //        private char replRunId[REDIS_RUN_ID_SIZE+1]; /* master run id if this is a master */
+    //        private char replRunId[REDIS_RUN_ID_SIZE+1];
     // 从服务器的监听端口号
-    private int slaveListeningPort; /* As configured with: SLAVECONF listening-port */
+    private int slaveListeningPort;
 
     // 事务状态
-    //        private multiState mState;      /* MULTI/EXEC state */
+    //        private multiState mState;
 
     // 阻塞类型
-    private int bType;              /* Type of blocking op if REDIS_BLOCKED. */
+    private int bType;
     // 阻塞状态
-    //        private blockingState bPop;     /* blocking state */
+    //        private blockingState bPop;
 
     // 最后被写入的全局复制偏移量
-    private long woff;         /* Last write global replication offset. */
+    private long woff;
 
     // 被监视的键
-    private List watchedKeys;     /* Keys WATCHED for MULTI/EXEC CAS */
+    private List watchedKeys;
 
     // 这个字典记录了客户端所有订阅的频道
     // 键为频道名字，值为 NULL
     // 也即是，一个频道的集合
-    private Map pubsubChannels;  /* channels a client is interested in (SUBSCRIBE) */
+    private Map pubsubChannels;
 
     // 链表，包含多个 pubsubPattern 结构
     // 记录了所有订阅频道的客户端的信息
     // 新 pubsubPattern 结构总是被添加到表尾
-    private List pubsubPatterns;  /* patterns a client is interested in (SUBSCRIBE) */
-    private Sds peerId;             /* Cached peer ID. */
+    private List pubsubPatterns;
+    private Sds peerId;
 
     /* Response buffer */
     // 回复偏移量

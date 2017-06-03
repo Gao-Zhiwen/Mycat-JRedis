@@ -4,6 +4,7 @@ target/
 .idea/
 logs/
 log/
+out/
 *.iml
 .classpath
 .settings/
@@ -11,3 +12,5 @@ log/
 *.log
 .DS_Store
 .gradle/
+*.ipr
+*.iws
