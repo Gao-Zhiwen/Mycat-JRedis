@@ -1,6 +1,9 @@
 ## todo list
 
-- [ ] sds
+- [ ] sds数据结构
+- [ ] RedisString字符串对象（编码：int、raw、embstr）
+
+
 
 
 
