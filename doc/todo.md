@@ -94,4 +94,4 @@
 
 ## 参考资料
 
-[redis顺序](http://blog.huangz.me/diary/2014/how-to-read-redis-source-code.html)
+[redis](http://blog.huangz.me/diary/2014/how-to-read-redis-source-code.html)
