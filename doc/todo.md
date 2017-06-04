@@ -1,3 +1,9 @@
+## todo list
+
+- [ ] sds
+
+
+
 ##1. 数据结构
 
 | 文件                                       | 内容             |
@@ -14,7 +20,7 @@
 
 | 文件                   | 内容                 |
 | -------------------- | ------------------ |
-| inset.h  intset.c    | 整数集合（intset）数据结构   |
+| intset.h  intset.c   | 整数集合（intset）数据结构   |
 | ziplist.h  ziplist.c | 压缩列表（zip list）数据结构 |
 
 
@@ -82,6 +88,7 @@
 | replication.c | 复制   |
 | sentinel.c    | 哨兵   |
 | cluster.c     | 集群   |
+
 
 
 
