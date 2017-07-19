@@ -5,12 +5,13 @@ import io.mycat.jredis.server.db.RedisDb;
 import io.mycat.jredis.struct.RedisObject;
 import io.mycat.jredis.struct.Sds;
 
+import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.Map;
 
 public class RedisClient {
     // 套接字描述符
-    private int fd;
+    private SocketChannel socketChannel;
 
     // 当前正在使用的数据库
     private RedisDb db;
@@ -31,7 +32,7 @@ public class RedisClient {
     private int argc;
 
     // 参数对象数组
-    private RedisObject argv;
+    private RedisObject[] argv;
 
     // 记录被客户端执行的命令
     private RedisCommand cmd;
@@ -166,5 +167,21 @@ public class RedisClient {
 
     public void setArgc(int argc) {
         this.argc = argc;
+    }
+
+    public RedisObject[] getArgv() {
+        return argv;
+    }
+
+    public void setArgv(RedisObject[] argv) {
+        this.argv = argv;
+    }
+
+    public int getAndIncreaseArgs() {
+        return argc++;
+    }
+
+    public long getAndDescreaseMultiBulkLen() {
+        return multiBulkLen--;
     }
 }

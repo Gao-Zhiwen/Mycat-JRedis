@@ -19,7 +19,7 @@ public class RedisServer {
     private int hz;
 
     // 数据库
-    private RedisDb db;
+    private RedisDb[] db;
 
     // 命令表（受到 rename 配置选项的作用）
     private Map commands;
@@ -36,7 +36,7 @@ public class RedisServer {
     private int shutDownAsap;
 
     // 在执行 serverCron() 时进行渐进式 rehash
-    private int activereHashing;
+    private int activeReHashing;
 
     // 是否设置了密码
     private String requirePass;

@@ -42,7 +42,7 @@ public class Sds {
             return null;
         }
         Sds sds = new Sds();
-        sds.buf = new char[initLen + 1];
+        sds.buf = new char[initLen];
         //初始化长度
         sds.len = initLen;
         //新sds不预留长度
@@ -51,7 +51,7 @@ public class Sds {
         if (initLen > 0 && (init != null && init.length > 0)) {
             System.arraycopy(init, 0, sds.buf, 0, initLen);
         }
-        sds.buf[initLen] = '\0';
+        //        sds.buf[initLen] = '\0';
         return sds;
     }
 
@@ -130,7 +130,7 @@ public class Sds {
     public static void sdsClear(Sds sds) {
         sds.free = sds.len;
         sds.len = 0;
-        sds.buf[0] = '\0';
+        //        sds.buf[0] = '\0';
     }
 
     //
@@ -182,7 +182,7 @@ public class Sds {
             newLen += SDS_MAX_PREALLOC;
         }
 
-        Sds newSds = sdsNewLen(sds.buf, newLen + 1);
+        Sds newSds = sdsNewLen(sds.buf, newLen);
 
         // 更新 sds 的空余长度
         newSds.free = newLen - len;
@@ -209,7 +209,7 @@ public class Sds {
         //        assert (sds.free >= 0);
 
         // 放置新的结尾符号
-        sds.buf[sds.len] = '\0';
+        //        sds.buf[sds.len] = '\0';
     }
 
     /**
@@ -219,7 +219,7 @@ public class Sds {
      * @return
      */
     public static Sds sdsRemoveFreeSpace(Sds sds) {
-        return sdsNewLen(sds.buf, sds.len + 1);
+        return sdsNewLen(sds.buf, sds.len);
     }
 
     /**
@@ -229,6 +229,6 @@ public class Sds {
      * @return
      */
     public static int sdsAllocSize(Sds sds) {
-        return sds.len + sds.free + 1;//todo need check
+        return sds.len + sds.free;//todo need check
     }
 }

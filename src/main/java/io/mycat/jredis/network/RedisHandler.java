@@ -57,18 +57,18 @@ public class RedisHandler {
                 return;
             }
 
-            byte[] byteBuf = new byte[num];
+            char[] buf = new char[num];
             for (int i = 0; i < num; i++) {
-                byteBuf[i] = readBuffer.get(lastPosition + i);
+                buf[i] = readBuffer.getChar(lastPosition + i);
             }
 
-            String requestStr = new String(byteBuf);
-            System.out.println("request str: " + requestStr);
+            //            String requestStr = new String(byteBuf);
+            //            System.out.println("request str: " + requestStr);
 
-            redisClient.setQueryBuf(Sds.sdsNew(requestStr));
+            redisClient.setQueryBuf(Sds.sdsNew(buf));
             RedisParser.processInputBuffer(redisClient);
             lastPosition += num;
-//            readBuffer.position(lastPosition);
+            //            readBuffer.position(lastPosition);
 
             if (lastPosition > readBuffer.capacity() / 2) {
                 readBuffer.position(lastPosition + 2);

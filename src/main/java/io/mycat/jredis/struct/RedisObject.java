@@ -20,5 +20,13 @@ public class RedisObject {
     private int refcount;
 
     // 指向实际值的指针
-    private RedisObject ptr;
+    private Object ptr;
+
+    public RedisObject(int type, Object ptr) {
+        this.type = type;
+        this.ptr = ptr;
+        this.encoding = RedisConstant.REDIS_ENCODING_RAW;
+        this.refcount = 1;
+        //todo lru
+    }
 }
