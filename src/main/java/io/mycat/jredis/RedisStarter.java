@@ -1,7 +1,7 @@
 package io.mycat.jredis;
 
-import io.mycat.jredis.datastruct.SdsHdr;
 import io.mycat.jredis.memory.RedisMemory;
+import io.mycat.jredis.util.SdsUtil;
 
 import java.util.Arrays;
 
@@ -16,7 +16,13 @@ public class RedisStarter {
         long size = 1 * 1024 * 1024;
         RedisMemory.allocateMemory(size);
 
-        char[] res = SdsHdr.sdsNew("hello".toCharArray());
-        System.out.println(Arrays.toString(res));
+        char[] c = "hello wolrd".toCharArray();
+        char[] d = "nihao".toCharArray();
+
+        char[] res1 = SdsUtil.sdsNewLen(c, 20);
+        char[] res2 = SdsUtil.sdsNewLen(d, 10);
+
+        System.out.println(Arrays.toString(res1));
+        System.out.println(res2[5]);
     }
 }
