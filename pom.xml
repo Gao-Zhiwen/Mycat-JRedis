@@ -18,6 +18,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.bramp.unsafe</groupId>
+            <artifactId>unsafe-helper</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
