@@ -19,7 +19,8 @@ public abstract class BaseStruct {
     }
 
     public void checkAddress() {
-        assert getAddress() == 0 : "address未加载";
+        if (getAddress() == 0)
+            throw new RuntimeException("address未加载");
     }
 
     /**

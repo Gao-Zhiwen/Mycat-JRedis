@@ -53,9 +53,8 @@ public class RedisMemory {
      * @return
      */
     public static long alloc(long length) {
-        //        if (length <= 0) {
-        //            return 0;
-        //        }
+        if (baseAddress == 0)
+            throw new RuntimeException("地址空间未申请");
 
         long newOffset = offset + length;
         //顺序分配的空间足够

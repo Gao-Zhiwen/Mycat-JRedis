@@ -39,7 +39,6 @@ public class SdsUtil {
         SdsHdr sdsHdr = new SdsHdr();
         sdsHdr.setAddress(address);
 
-        System.out.println(sdsHdr.trace());
         return sdsHdr;
     }
 
