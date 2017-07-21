@@ -1,6 +1,7 @@
 package io.mycat.jredis;
 
-import io.mycat.jredis.util.SdsUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Desc:
@@ -9,8 +10,9 @@ import io.mycat.jredis.util.SdsUtil;
  * @author: gaozhiwen
  */
 public class RedisStarter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RedisStarter.class);
+
     public static void main(String[] args) {
-        //        RedisMemory.allocateMemory(1 * 1024 * 1024);
-        SdsUtil.sdsNew("he".getBytes());
+        
     }
 }

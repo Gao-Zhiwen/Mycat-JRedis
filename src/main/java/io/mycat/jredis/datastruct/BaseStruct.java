@@ -1,5 +1,8 @@
 package io.mycat.jredis.datastruct;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Desc:
  *
@@ -7,10 +10,11 @@ package io.mycat.jredis.datastruct;
  * @author: gaozhiwen
  */
 public abstract class BaseStruct {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BaseStruct.class);
+
     private long address;//获取首地址
 
     public long getAddress() {
-        checkAddress();
         return address;
     }
 
@@ -35,5 +39,9 @@ public abstract class BaseStruct {
      *
      * @return
      */
-    public abstract String trace();
+    public void trace() {
+        LOGGER.trace(traceInfo());
+    }
+
+    protected abstract String traceInfo();
 }

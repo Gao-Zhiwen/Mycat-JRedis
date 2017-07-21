@@ -16,21 +16,8 @@ public class SdsHdr extends BaseStruct {
     private byte[] buf;// 数据空间
 
     @Override public int getSize() {
-        return RedisMemory.INT_INDEX_SCALE * 2 + RedisMemory.BYTE_INDEX_SCALE * (getLenMem()
-                + getFreeMem());
-    }
-
-    @Override public String trace() {
-        long address = getAddress();
-        if (address == 0) {
-            return null;
-        }
-
-        SdsHdr sds = new SdsHdr();
-        sds.setFree(getFreeMem());
-        sds.setLen(getLenMem());
-        sds.setBuf(getBufMem());
-        return sds.toString();
+        return RedisMemory.INT_INDEX_SCALE * 2 + RedisMemory.BYTE_INDEX_SCALE * (getLen()
+                + getFree());
     }
 
     public static long getFreeOffset() {
@@ -45,50 +32,33 @@ public class SdsHdr extends BaseStruct {
         return RedisMemory.INT_INDEX_SCALE * 2;
     }
 
-    public int getFreeMem() {
+    public int getFree() {
         checkAddress();
         return RedisMemory.getInt(getAddress() + getFreeOffset());
     }
 
-    public int getLenMem() {
+    public int getLen() {
         checkAddress();
         return RedisMemory.getInt(getAddress() + getLenOffset());
     }
 
-    public byte[] getBufMem() {
-        checkAddress();
-        return RedisMemory.getBytes(getAddress() + getBufOffset(), getLenMem());
-    }
-
-    public int getFree() {
-        return free;
-    }
-
-    public void setFree(int free) {
-        this.free = free;
-    }
-
-    public int getLen() {
-        return len;
-    }
-
-    public void setLen(int len) {
-        this.len = len;
-    }
-
     public byte[] getBuf() {
-        return buf;
+        checkAddress();
+        return RedisMemory.getBytes(getAddress() + getBufOffset(), getLen());
     }
 
-    public void setBuf(byte[] buf) {
-        this.buf = buf;
-    }
+    @Override protected String traceInfo() {
+        long address = getAddress();
+        if (address == 0) {
+            return null;
+        }
 
-    @Override public String toString() {
-        return "SdsHdr{" +
-                "len=" + len +
-                ", free=" + free +
-                ", buf=" + Arrays.toString(buf) +
-                '}';
+        SdsHdr sds = new SdsHdr();
+        sds.free = getFree();
+        sds.len = getLen();
+        sds.buf = getBuf();
+
+        return "SdsHdr{len=" + sds.len + ", free=" + sds.free + ", buf=" + Arrays.toString(sds.buf)
+                + "}";
     }
 }

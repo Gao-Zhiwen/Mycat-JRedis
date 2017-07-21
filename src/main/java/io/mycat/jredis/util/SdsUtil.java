@@ -92,7 +92,7 @@ public class SdsUtil {
      */
     public static void sdsClear(SdsHdr s) {
         // 重新计算属性 free += len, len = 0;  设置free的值
-        RedisMemory.putInt(s.getAddress() + SdsHdr.getFreeOffset(), s.getFreeMem() + s.getLenMem());
+        RedisMemory.putInt(s.getAddress() + SdsHdr.getFreeOffset(), s.getFree() + s.getLen());
 
         //设置len的值
         RedisMemory.putInt(s.getAddress() + SdsHdr.getLenOffset(), 0);
@@ -103,11 +103,11 @@ public class SdsUtil {
             return null;
 
         // s 目前的空余空间已经足够，无须再进行扩展，直接返回
-        if (s.getFreeMem() >= addLen)
+        if (s.getFree() >= addLen)
             return s;
 
         // 获取 s 目前已占用空间的长度
-        int len = s.getLenMem();
+        int len = s.getLen();
         // s 最少需要的长度
         int newLen = len + addLen;
         int headerLen = RedisMemory.INT_INDEX_SCALE * 2;

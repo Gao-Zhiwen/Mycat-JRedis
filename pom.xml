@@ -11,16 +11,33 @@
     <url>http://io.mycat</url>
 
     <properties>
-        <app.encoding>UTF-8</app.encoding>
+        <javaVersion>1.8</javaVersion>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <log4j-core.version>2.3</log4j-core.version>
+        <log4j-slf4j-impl.version>2.3</log4j-slf4j-impl.version>
+        <slf4j-api.version>1.7.12</slf4j-api.version>
         <junit.version>4.12</junit.version>
     </properties>
 
     <dependencies>
+        <!-- Logging -->
         <dependency>
-            <groupId>net.bramp.unsafe</groupId>
-            <artifactId>unsafe-helper</artifactId>
-            <version>1.0</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j-api.version}</version>
+            <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j-slf4j-impl.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j-core.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

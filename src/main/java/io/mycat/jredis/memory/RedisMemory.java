@@ -1,7 +1,6 @@
 package io.mycat.jredis.memory;
 
 import io.mycat.jredis.util.UnsafeUtil;
-import net.bramp.unsafe.UnsafeHelper;
 
 import java.util.Arrays;
 import java.util.TreeMap;
@@ -30,11 +29,10 @@ public class RedisMemory {
      * @param size
      */
     public static void allocateMemory(long size) {
-        baseAddress = UnsafeHelper.getUnsafe().allocateMemory(size);
+        baseAddress = UnsafeUtil.getUnsafe().allocateMemory(size);
         if (baseAddress == 0) {
             throw new OutOfMemoryError();
         }
-        //        offset = 0;
         RedisMemory.totalSize = size;
     }
 

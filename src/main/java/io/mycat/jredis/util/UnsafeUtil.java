@@ -1,7 +1,8 @@
 package io.mycat.jredis.util;
 
-import net.bramp.unsafe.UnsafeHelper;
 import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
 
 /**
  * Desc:
@@ -10,8 +11,20 @@ import sun.misc.Unsafe;
  * @author: gaozhiwen
  */
 public class UnsafeUtil {
+    private static final Unsafe unsafe;
+
+    static {
+        try {
+            Field f = Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+            unsafe = (Unsafe) f.get(null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Unsafe getUnsafe() {
-        return UnsafeHelper.getUnsafe();
+        return unsafe;
     }
 
     public static void copyMemory(Object src, long srcAddress, Object desc, long descAddress,
