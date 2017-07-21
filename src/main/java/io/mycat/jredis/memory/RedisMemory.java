@@ -21,8 +21,8 @@ public class RedisMemory {
 
     public static final int INT_INDEX_SCALE = getIndexScale(int[].class);
     public static final int INT_BASE_OFFSET = getBaseOffset(int[].class);
-    public static final int CHAR_INDEX_SCALE = getIndexScale(char[].class);
-    public static final int CHAR_BASE_OFFSET = getBaseOffset(char[].class);
+    public static final int BYTE_INDEX_SCALE = getIndexScale(byte[].class);
+    public static final int BYTE_BASE_OFFSET = getBaseOffset(byte[].class);
 
     /**
      * 分配指定大小的堆外内存
@@ -32,7 +32,7 @@ public class RedisMemory {
     public static void allocateMemory(long size) {
         baseAddress = UnsafeHelper.getUnsafe().allocateMemory(size);
         if (baseAddress == 0) {
-            throw new RuntimeException("Out of Memory");
+            throw new OutOfMemoryError();
         }
         //        offset = 0;
         RedisMemory.totalSize = size;
@@ -40,6 +40,10 @@ public class RedisMemory {
 
     public static long getAddress(long offset) {
         return baseAddress + offset;
+    }
+
+    public static TreeMap<Long, Integer> getFreeMemory() {
+        return freeMemory;
     }
 
     /**
@@ -83,34 +87,34 @@ public class RedisMemory {
         UnsafeUtil.getUnsafe().putInt(address, value);
     }
 
-    public static void getInt(long address) {
-        UnsafeUtil.getUnsafe().getInt(address);
+    public static int getInt(long address) {
+        return UnsafeUtil.getUnsafe().getInt(address);
     }
 
     /**
      * 将指定字符数组中的内容拷贝到内存中
      *
      * @param address
-     * @param chars
+     * @param bytes
      */
-    public static void putChars(long address, char[] chars) {
-        if (chars == null)
+    public static void putBytes(long address, byte[] bytes) {
+        if (bytes == null)
             return;
-        int length = chars.length;
-        UnsafeUtil.copyMemory(chars, CHAR_BASE_OFFSET, null, address, length * CHAR_INDEX_SCALE);
+        int length = bytes.length;
+        UnsafeUtil.copyMemory(bytes, BYTE_BASE_OFFSET, null, address, length * BYTE_INDEX_SCALE);
     }
 
-    public static void putChars(long address, char[] chars, int length) {
-        if (chars == null)
+    public static void putBytes(long address, byte[] bytes, int length) {
+        if (bytes == null)
             return;
 
-        int charLen = chars.length;
-        if (charLen >= length) {
+        int byteLen = bytes.length;
+        if (byteLen >= length) {
             UnsafeUtil
-                    .copyMemory(chars, CHAR_BASE_OFFSET, null, address, length * CHAR_INDEX_SCALE);
+                    .copyMemory(bytes, BYTE_BASE_OFFSET, null, address, length * BYTE_INDEX_SCALE);
         } else {
-            UnsafeUtil.copyMemory(Arrays.copyOf(chars, length), CHAR_BASE_OFFSET, null, address,
-                    length * CHAR_INDEX_SCALE);
+            UnsafeUtil.copyMemory(Arrays.copyOf(bytes, length), BYTE_BASE_OFFSET, null, address,
+                    length * BYTE_INDEX_SCALE);
         }
     }
 
@@ -121,9 +125,9 @@ public class RedisMemory {
      * @param length
      * @return
      */
-    public static char[] getChars(long address, int length) {
-        char[] result = new char[length];
-        UnsafeUtil.copyMemory(null, address, result, CHAR_BASE_OFFSET, length * CHAR_INDEX_SCALE);
+    public static byte[] getBytes(long address, int length) {
+        byte[] result = new byte[length];
+        UnsafeUtil.copyMemory(null, address, result, BYTE_BASE_OFFSET, length * BYTE_INDEX_SCALE);
         return result;
     }
 

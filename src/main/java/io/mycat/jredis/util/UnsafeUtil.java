@@ -14,8 +14,8 @@ public class UnsafeUtil {
         return UnsafeHelper.getUnsafe();
     }
 
-    public static void copyMemory(Object src, long srcOffset, Object desc, long descOffset,
+    public static void copyMemory(Object src, long srcAddress, Object desc, long descAddress,
             long length) {
-        getUnsafe().copyMemory(src, srcOffset, desc, descOffset, length);
+        getUnsafe().copyMemory(src, srcAddress, desc, descAddress, length);
     }
 }

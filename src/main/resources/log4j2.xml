@@ -4,7 +4,6 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] [%thread] %logger{36}.%M(%F:%L) - %m%n"/>
         </Console>
-
         <RollingFile name="RollingFile" fileName="logs/jcache.log"
                      filePattern="logs/$${date:yyyy-MM}/mycat-jcache-%d{MM-dd}-%i.log.gz">
             <PatternLayout>
@@ -17,6 +16,7 @@
             </Policies>
         </RollingFile>
     </Appenders>
+
     <Loggers>
         <logger name="org.apache.*" level="DEBUG" additivity="false"/>
         <Root level="trace">

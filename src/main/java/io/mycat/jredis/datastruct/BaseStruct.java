@@ -10,6 +10,7 @@ public abstract class BaseStruct {
     private long address;//获取首地址
 
     public long getAddress() {
+        checkAddress();
         return address;
     }
 
@@ -17,5 +18,21 @@ public abstract class BaseStruct {
         this.address = address;
     }
 
+    public void checkAddress() {
+        assert getAddress() == 0 : "address未加载";
+    }
+
+    /**
+     * 用于获取数据结构在内存占用的大小
+     *
+     * @return
+     */
     public abstract int getSize();
+
+    /**
+     * 用于测试跟踪内存数据
+     *
+     * @return
+     */
+    public abstract String trace();
 }
