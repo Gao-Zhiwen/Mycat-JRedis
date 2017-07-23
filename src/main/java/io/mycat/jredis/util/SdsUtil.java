@@ -2,7 +2,8 @@ package io.mycat.jredis.util;
 
 import io.mycat.jredis.constant.RedisConstant;
 import io.mycat.jredis.datastruct.SdsHdr;
-import io.mycat.jredis.memory.RedisMemory;
+import io.mycat.jredis.memory.MemoryManager;
+import sun.misc.Unsafe;
 
 /**
  * Desc: 存储结构： free(int) - len(int) - buf(char[])
@@ -19,25 +20,24 @@ public class SdsUtil {
      * @param initLen 初始化字符串的长度
      * @return 创建成功返回 sdshdr 相对应的 sds，创建失败返回 NULL
      */
-    public static SdsHdr sdsNewLen(byte[] init, int initLen) {
-        long address = RedisMemory.alloc(RedisMemory.INT_INDEX_SCALE * 2 + initLen);
+    public static SdsHdr sdsNewLen(char[] init, int initLen) {
+        SdsHdr sdsHdr = new SdsHdr();
+        long address = MemoryManager
+                .alloc(MemoryManager.sizeOf(sdsHdr) + initLen * Unsafe.ARRAY_CHAR_INDEX_SCALE);
 
         // 内存分配失败，返回
         if (address == 0) {
             return null;
         }
 
-        // 新 sds 不预留任何空间 free
-        RedisMemory.putInt(address + SdsHdr.getFreeOffset(), 0);
-        // 设置初始化长度 len
-        RedisMemory.putInt(address + SdsHdr.getLenOffset(), initLen);
-
-        // 如果有指定初始化内容，将它们复制到 sdshdr 的 buf 中
-        if (initLen >= 0 && init != null)
-            RedisMemory.putBytes(address + SdsHdr.getBufOffset(), init, initLen);
-
-        SdsHdr sdsHdr = new SdsHdr();
         sdsHdr.setAddress(address);
+
+        sdsHdr.setFree(0);// 新 sds 不预留任何空间 free
+        sdsHdr.setLen(initLen);// 设置初始化长度 len
+        if (initLen >= 0 && init != null) {
+            // 如果有指定初始化内容，将它们复制到 sdshdr 的 buf 中
+            sdsHdr.setBuf(init, initLen);
+        }
 
         return sdsHdr;
     }
@@ -57,7 +57,7 @@ public class SdsUtil {
      * @param init 如果输入为 NULL ，那么创建一个空白 sds，否则，新创建的 sds 中包含和 init 内容相同字符串
      * @return 创建成功返回 sdshdr 相对应的 sds，创建失败返回 NULL
      */
-    public static SdsHdr sdsNew(final byte[] init) {
+    public static SdsHdr sdsNew(final char[] init) {
         int initLen = (init == null) ? 0 : init.length;
         return sdsNewLen(init, initLen);
     }
@@ -81,7 +81,7 @@ public class SdsUtil {
         if (s == null) {
             return;
         }
-        RedisMemory.free(s.getAddress(), s.getSize());
+        MemoryManager.free(s);
     }
 
     /**
@@ -92,10 +92,9 @@ public class SdsUtil {
      */
     public static void sdsClear(SdsHdr s) {
         // 重新计算属性 free += len, len = 0;  设置free的值
-        RedisMemory.putInt(s.getAddress() + SdsHdr.getFreeOffset(), s.getFree() + s.getLen());
-
+        s.setFree(s.getFree() + s.getLen());
         //设置len的值
-        RedisMemory.putInt(s.getAddress() + SdsHdr.getLenOffset(), 0);
+        s.setLen(0);
     }
 
     public static SdsHdr sdsMakeRoomFor(SdsHdr s, int addLen) {
@@ -110,8 +109,8 @@ public class SdsUtil {
         int len = s.getLen();
         // s 最少需要的长度
         int newLen = len + addLen;
-        int headerLen = RedisMemory.INT_INDEX_SCALE * 2;
-        int size = s.getSize();
+        int headerLen = Unsafe.ARRAY_INT_INDEX_SCALE * 2;
+        int size = s.sizeOf();
 
         // 根据新长度，为 s 分配新空间所需的大小
         if (newLen < RedisConstant.SDS_MAX_PREALLOC) {
@@ -122,20 +121,23 @@ public class SdsUtil {
             newLen += RedisConstant.SDS_MAX_PREALLOC;
         }
 
-        long address = RedisMemory.alloc(headerLen + newLen);
+        long address = MemoryManager.alloc(headerLen + newLen);
 
         // 内存不足，分配失败，返回
         if (address == 0)
             return null;
 
         // 分配成功后拷贝原内容到新地址空间并回收原地址空间
-        UnsafeUtil.copyMemory(null, s.getAddress(), null, address, size);
-        RedisMemory.free(s.getAddress(), size);
-        // 更新 sds 的空余长度 free
-        RedisMemory.putInt(address + SdsHdr.getFreeOffset(), newLen - len);
+        UnsafeUtil.getUnsafe().copyMemory(null, s.getAddress(), null, address, size);
+
+        MemoryManager.free(s);
 
         SdsHdr sdsHdr = new SdsHdr();
         sdsHdr.setAddress(address);
+
+        // 更新 sds 的空余长度 free
+        sdsHdr.setFree(newLen - len);
+
         return sdsHdr;
     }
 }

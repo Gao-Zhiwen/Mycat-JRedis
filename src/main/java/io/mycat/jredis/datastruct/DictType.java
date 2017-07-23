@@ -8,20 +8,20 @@ package io.mycat.jredis.datastruct;
  */
 public interface DictType {
     //计算哈希值的函数
-    public int hashFunction(final String key);
+    public int hashFunction(final BaseStruct key);
 
     //复制键的函数
-    public void keyDup(Object privData, final String key);
+    public BaseStruct keyDup(Object privData, final BaseStruct key);
 
     //复制值的函数
-    public void valDup(Object privdata, Object obj);
+    public BaseStruct valDup(Object privdata, BaseStruct obj);
 
     //对比键的函数
-    public int keyCompare(Object privdata, final Object key1, final Object key2);
+    public boolean keyCompare(Object privdata, final BaseStruct key1, final BaseStruct key2);
 
     //销毁键的函数
-    public void keyDestructor(Object privdata, Object key);
+    public void keyDestructor(Object privdata, BaseStruct key);
 
     //销毁值的函数
-    public void valDestructor(Object privdata, Object obj);
+    public void valDestructor(Object privdata, BaseStruct obj);
 }

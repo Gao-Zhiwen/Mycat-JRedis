@@ -27,8 +27,29 @@ public class UnsafeUtil {
         return unsafe;
     }
 
-    public static void copyMemory(Object src, long srcAddress, Object desc, long descAddress,
-            long length) {
-        getUnsafe().copyMemory(src, srcAddress, desc, descAddress, length);
-    }
+//    public static long getAddress(Object target) {
+//        Object objArray[] = new Object[1];
+//        objArray[0] = target;
+//
+//        long arrayOffset = Unsafe.ARRAY_OBJECT_BASE_OFFSET;
+//        long arrayIndex = Unsafe.ARRAY_OBJECT_INDEX_SCALE;
+//        long value = 0L;
+//
+//        if (8 == arrayIndex) {
+//            value = unsafe.getLong(objArray, arrayOffset);
+//        } else {
+//            value = unsafe.getInt(objArray, arrayOffset);
+//            //            value = normalize(unsafe.getInt(objArray, arrayOffset));
+//            //            if (8 == unsafe.addressSize()) {
+//            //                value = value << 3;
+//            //            }
+//        }
+//        return value;
+//    }
+//
+//    private static long normalize(int value) {
+//        if (value >= 0)
+//            return value;
+//        return value & 0xFFFFFFFFL;
+//    }
 }

@@ -1,8 +1,5 @@
 package io.mycat.jredis.datastruct;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Desc:
  *
@@ -10,9 +7,7 @@ import org.slf4j.LoggerFactory;
  * @author: gaozhiwen
  */
 public abstract class BaseStruct {
-    private static final Logger LOGGER = LoggerFactory.getLogger(BaseStruct.class);
-
-    private long address;//获取首地址
+    protected long address;//获取首地址
 
     public long getAddress() {
         return address;
@@ -22,26 +17,10 @@ public abstract class BaseStruct {
         this.address = address;
     }
 
-    public void checkAddress() {
-        if (getAddress() == 0)
-            throw new RuntimeException("address未加载");
-    }
-
     /**
-     * 用于获取数据结构在内存占用的大小
+     * 用于释放内存空间时指定内存大小
      *
      * @return
      */
-    public abstract int getSize();
-
-    /**
-     * 用于测试跟踪内存数据
-     *
-     * @return
-     */
-    public void trace() {
-        LOGGER.trace(traceInfo());
-    }
-
-    protected abstract String traceInfo();
+    public abstract int sizeOf();
 }
