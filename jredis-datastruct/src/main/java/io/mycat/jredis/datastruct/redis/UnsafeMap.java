@@ -6,6 +6,8 @@ import io.mycat.jredis.datastruct.util.MemoryManager;
 import io.mycat.jredis.datastruct.util.UnsafeUtil;
 import sun.misc.Unsafe;
 
+import java.util.Arrays;
+
 /**
  * Desc: 堆外存储格式  iterators rehashidx ht[0] ht[1]
  *
@@ -13,9 +15,9 @@ import sun.misc.Unsafe;
  * @author: gaozhiwen
  */
 public class UnsafeMap extends UnsafeObject {
-    //    private UnsafeHashTable[] ht;//哈希表
-    //    private int iterators;//目前正在运行的安全迭代器的数量
-    //    private int reHashIdx;//rehash索引，当rehash不在进行时值为-1
+    //        private UnsafeHashTable[] ht;//哈希表
+    //        private int iterators;//目前正在运行的安全迭代器的数量
+    //        private int reHashIdx;//rehash索引，当rehash不在进行时值为-1
 
     private Object privData;//私有数据
     private Object type;//类型特定函数
@@ -36,6 +38,12 @@ public class UnsafeMap extends UnsafeObject {
         return 0;
     }
 
+    @Override public String toString() {
+        return "UnsafeMap{address=" + address + ", ht[0]=" + getHashTable(0) + ", ht[1]="
+                + getHashTable(1) + ", iterators=" + getIterators() + ", reHashIdx="
+                + getRehashIdx() + ", privData=" + privData + ", type=" + type + '}';
+    }
+
     public int getIterators() {
         return UnsafeUtil.getUnsafe().getInt(address);
     }
@@ -53,12 +61,6 @@ public class UnsafeMap extends UnsafeObject {
     }
 
     public UnsafeHashTable getHashTable(int index) {
-        //        long htAdd = UnsafeUtil.getUnsafe().getLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 2
-        //                + (Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE) * index);
-        //
-        //        if (htAdd == 0)
-        //            return null;
-
         UnsafeHashTable hashTable = new UnsafeHashTable();
         hashTable.setAddress(address + Unsafe.ARRAY_INT_INDEX_SCALE * 2
                 + (Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE) * index);
@@ -66,28 +68,33 @@ public class UnsafeMap extends UnsafeObject {
     }
 
     public void setHashTable(int index, UnsafeHashTable hashTable) {
+        int length = Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE;
         long baseAdd = address + Unsafe.ARRAY_INT_INDEX_SCALE * 2
                 + (Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE) * index;
-        UnsafeUtil.getUnsafe().putInt(baseAdd, hashTable == null ? 0 : hashTable.getUsed());
 
-        baseAdd += Unsafe.ARRAY_INT_INDEX_SCALE;
-        UnsafeUtil.getUnsafe().putInt(baseAdd, hashTable == null ? 0 : hashTable.getSizeMask());
+        if (hashTable == null) {
+            UnsafeUtil.getUnsafe()
+                    .copyMemory(new byte[length], Unsafe.ARRAY_BYTE_BASE_OFFSET, null, baseAdd,
+                            length);
+        } else {
+            UnsafeUtil.getUnsafe().copyMemory(null, hashTable.getAddress(), null, baseAdd, length);
+        }
+    }
 
-        baseAdd += Unsafe.ARRAY_INT_INDEX_SCALE;
-        UnsafeUtil.getUnsafe().putInt(baseAdd, hashTable == null ? 0 : hashTable.getSize());
+    public Object getPrivData() {
+        return privData;
+    }
 
-        baseAdd += Unsafe.ARRAY_INT_INDEX_SCALE;
-        UnsafeEntry[] entries = ((hashTable == null) ? null : hashTable.getTable());
-        UnsafeUtil.getUnsafe().putLong(baseAdd, entries == null ? 0 : entries[0].getAddress());
+    public void setPrivData(Object privData) {
+        this.privData = privData;
+    }
 
-        //        long htAdd = 0L;
-        //
-        //        if (hashTable != null)
-        //            htAdd = hashTable.getAddress();
-        //
-        //        UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 2
-        //                        + (Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE) * index,
-        //                htAdd);
+    public Object getType() {
+        return type;
+    }
+
+    public void setType(Object type) {
+        this.type = type;
     }
 
 
@@ -95,7 +102,7 @@ public class UnsafeMap extends UnsafeObject {
         //        int used;// 该哈希表已有节点的数量
         //        int sizemask;// 哈希表大小掩码，用于计算索引值，总是等于 size - 1
         //        int size;// 哈希表大小
-        //        dictEntry **table;// 哈希表数组
+        //        UnsafeEntry[] table;// 哈希表数组
 
         public UnsafeHashTable() {
         }
@@ -108,8 +115,19 @@ public class UnsafeMap extends UnsafeObject {
             return Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE;
         }
 
+        public int sizeOf(int size) {
+            return Unsafe.ARRAY_INT_INDEX_SCALE * 3 + Unsafe.ARRAY_LONG_INDEX_SCALE * (3 * size
+                    + 1);
+        }
+
         @Override public int freeSize() {
             return 0;
+        }
+
+        @Override public String toString() {
+            return "UnsafeHashTable{address=" + address + ", used=" + getUsed() + ", sizemask="
+                    + getSizeMask() + ", size=" + getSize() + ", table=" + Arrays
+                    .toString(getTable()) + '}';
         }
 
         public int getUsed() {
@@ -136,6 +154,36 @@ public class UnsafeMap extends UnsafeObject {
             UnsafeUtil.getUnsafe().putInt(address + Unsafe.ARRAY_INT_INDEX_SCALE * 2, size);
         }
 
+        public UnsafeEntry getEntry(int index) {
+            long tableAdd =
+                    UnsafeUtil.getUnsafe().getLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3);
+
+            if (tableAdd == 0)
+                return null;
+
+            long pointer = tableAdd + Unsafe.ARRAY_LONG_INDEX_SCALE * index;
+            long entryAdd = UnsafeUtil.getUnsafe().getLong(pointer);
+
+            if (entryAdd == 0)
+                return null;
+
+            UnsafeEntry entry = new UnsafeEntry();
+            entry.setAddress(entryAdd);
+            return entry;
+        }
+
+        public void addEntry(int index, UnsafeEntry entry) {
+            long tableAdd =
+                    UnsafeUtil.getUnsafe().getLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3);
+
+            if (tableAdd == 0)
+                return;
+
+            long idxPointer = tableAdd + Unsafe.ARRAY_LONG_INDEX_SCALE * index;
+            //把entry放入链首
+            UnsafeUtil.getUnsafe().putLong(idxPointer, entry.getAddress());
+        }
+
         public UnsafeEntry[] getTable() {
             long tableAdd =
                     UnsafeUtil.getUnsafe().getLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3);
@@ -146,9 +194,15 @@ public class UnsafeMap extends UnsafeObject {
             int size = getSize();
             UnsafeEntry[] table = new UnsafeEntry[size];
             for (int i = 0; i < size; i++) {
-                UnsafeEntry entry = new UnsafeEntry();
-                entry.setAddress(tableAdd + Unsafe.ARRAY_LONG_INDEX_SCALE * i);
-                table[i] = entry;
+                long pointer = tableAdd + Unsafe.ARRAY_LONG_INDEX_SCALE * i;
+                long entryAdd = UnsafeUtil.getUnsafe().getLong(pointer);
+                if (entryAdd == 0) {
+                    table[i] = null;
+                } else {
+                    UnsafeEntry entry = new UnsafeEntry();
+                    entry.setAddress(entryAdd);
+                    table[i] = entry;
+                }
             }
             return table;
         }
@@ -161,6 +215,19 @@ public class UnsafeMap extends UnsafeObject {
 
             UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3, entryAdd);
         }
+
+        public void setTableAddress(long tableAdd) {
+            UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3, tableAdd);
+        }
+
+        //        public void setTable(UnsafeEntry unsafeEntry) {
+        //            long entryAdd = 0;
+        //
+        //            if (unsafeEntry != null)
+        //                entryAdd = unsafeEntry.getAddress();
+        //
+        //            UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3, entryAdd);
+        //        }
     }
 
 
@@ -169,12 +236,24 @@ public class UnsafeMap extends UnsafeObject {
         //        UnsafeObject value;// 值
         //        UnsafeEntry next;// 指向下个哈希表节点，形成链表
 
+        public UnsafeEntry() {
+        }
+
+        public UnsafeEntry(long address) {
+            super.address = address;
+        }
+
         @Override public int sizeOf() {
             return Unsafe.ARRAY_LONG_INDEX_SCALE * 3;
         }
 
         @Override public int freeSize() {
             return 0;
+        }
+
+        @Override public String toString() {
+            return "UnsafeEntry{address=" + address + ", key=" + getKey() + ", value=" + getValue()
+                    + ", next=" + getNext() + '}';
         }
 
         public UnsafeString getKey() {
@@ -212,7 +291,8 @@ public class UnsafeMap extends UnsafeObject {
         }
 
         public void setValue(UnsafeObject value) {
-            UnsafeUtil.getUnsafe().putLong(address, value.getAddress());
+            UnsafeUtil.getUnsafe()
+                    .putLong(address + Unsafe.ARRAY_LONG_INDEX_SCALE, value.getAddress());
         }
 
         public UnsafeEntry getNext() {
@@ -228,7 +308,12 @@ public class UnsafeMap extends UnsafeObject {
         }
 
         public void setNext(UnsafeEntry next) {
-            UnsafeUtil.getUnsafe().putLong(address, next.getAddress());
+            long value = 0;
+
+            if (next != null)
+                value = next.getAddress();
+
+            UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_LONG_INDEX_SCALE * 2, value);
         }
     }
 
@@ -240,334 +325,320 @@ public class UnsafeMap extends UnsafeObject {
      * @return
      */
     public static UnsafeMap dictCreate(Object type, Object privData) {
-        UnsafeMap dict = new UnsafeMap();
-        long dictAdd = MemoryManager.malloc(dict.sizeOf());
+        UnsafeMap map = new UnsafeMap();
+        long mapAdd = MemoryManager.malloc(map.sizeOf());
 
-        if (dictAdd == 0)
+        if (mapAdd == 0)
             return null;
 
-        dict.setAddress(dictAdd);
-        _dictInit(dict, type, privData);
-        return dict;
+        map.setAddress(mapAdd);
+        _init(map, type, privData);
+        return map;
     }
 
-    //    /**
-    //     * 缩小给定字典
-    //     * 让它的已用节点数和字典大小之间的比率接近 1:1
-    //     *
-    //     * @param d
-    //     * @return 成功创建体积更小的 ht[1] ，可以开始 resize 时，返回 DICT_OK；DICT_ERR 表示字典已经在 rehash ，或者 dict_can_resize 为假
-    //     */
-    //    public static int dictResize(Dict d) {
-    //        int minimal;
-    //
-    //        // 不能在关闭 rehash 或者正在 rehash 的时候调用
-    //        if (RedisConstant.DICT_CAN_RESIZE == 0 || dictIsRehashing(d))
-    //            return RedisConstant.DICT_ERR;
-    //
-    //        // 计算让比率接近 1：1 所需要的最少节点数量
-    //        minimal = d.getHt(0).getUsed();
-    //        if (minimal < RedisConstant.DICT_HT_INITIAL_SIZE)
-    //            minimal = RedisConstant.DICT_HT_INITIAL_SIZE;
-    //
-    //        // 调整字典的大小
-    //        return dictExpand(d, minimal);
-    //    }
-    //
-    //    /**
-    //     * 创建一个新的哈希表，并根据字典的情况，选择以下其中一个动作来进行：
-    //     * 1) 如果字典的 0 号哈希表为空，那么将新哈希表设置为 0 号哈希表
-    //     * 2) 如果字典的 0 号哈希表非空，那么将新哈希表设置为 1 号哈希表，
-    //     * 并打开字典的 rehash 标识，使得程序可以开始对字典进行 rehash
-    //     *
-    //     * @param d
-    //     * @param size
-    //     * @return size 参数不够大，或者 rehash 已经在进行时，返回 DICT_ERR；成功创建 0 号哈希表，或者 1 号哈希表时，返回 DICT_OK
-    //     */
-    //    public static int dictExpand(Dict d, int size) {
-    //        // 新哈希表
-    //        DictHt n = new DictHt();
-    //
-    //        // 根据 size 参数，计算哈希表的大小
-    //        int realsize = _dictNextPower(size);
-    //
-    //        // 不能在字典正在 rehash 时进行
-    //        // size 的值也不能小于 0 号哈希表的当前已使用节点
-    //        if (dictIsRehashing(d) || d.getHt(0).getUsed() > size)
-    //            return RedisConstant.DICT_ERR;
-    //
-    //        // 为哈希表分配空间，并将所有指针指向 NULL
-    //        n.setSize(realsize);
-    //        n.setSizeMask(realsize - 1);
-    //        n.setUsed(0);
-    //        //        n.table = zcalloc(realsize*sizeof(dictEntry*));
-    //        // n.setAddress();
-    //
-    //        // 如果 0 号哈希表为空，那么这是一次初始化：
-    //        // 程序将新哈希表赋给 0 号哈希表的指针，然后字典就可以开始处理键值对了。
-    //        if (d.getHt(0).getTable() == null) {
-    //            d.setHt(0, n.getAddress());
-    //            return RedisConstant.DICT_OK;
-    //        }
-    //
-    //        // 如果 0 号哈希表非空，那么这是一次 rehash ：
-    //        // 程序将新哈希表设置为 1 号哈希表，
-    //        // 并将字典的 rehash 标识打开，让程序可以开始对字典进行 rehash
-    //        d.setHt(1, n.getAddress());
-    //        d.setRehashidx(0);
-    //        return RedisConstant.DICT_OK;
-    //    }
-    //
-    //    /**
-    //     * 执行 N 步渐进式 rehash 。
-    //     * 返回 1 表示仍有键需要从 0 号哈希表移动到 1 号哈希表，
-    //     * 返回 0 则表示所有键都已经迁移完毕。
-    //     * 注意，每步 rehash 都是以一个哈希表索引（桶）作为单位的，
-    //     * 一个桶里可能会有多个节点，
-    //     * 被 rehash 的桶里的所有节点都会被移动到新哈希表。
-    //     *
-    //     * @param d
-    //     * @param n
-    //     * @return
-    //     */
-    //    public static int dictRehash(Dict d, int n) {
-    //        // 只可以在 rehash 进行中时执行
-    //        if (!dictIsRehashing(d))
-    //            return 0;
-    //
-    //        // 进行 N 步迁移
-    //        while (n-- != 0) {
-    //            // 如果 0 号哈希表为空，那么表示 rehash 执行完毕
-    //            if (d.getHt(0).getUsed() == 0) {
-    //                // 释放 0 号哈希表
-    //                //                zfree(d->ht[0].table);
-    //
-    //                // 将原来的 1 号哈希表设置为新的 0 号哈希表
-    //                d.setHt(0, d.getHt(1).getAddress());
-    //
-    //                // 重置旧的 1 号哈希表
-    //                _dictReset(d.getHt(1));
-    //
-    //                // 关闭 rehash 标识
-    //                d.setRehashidx(-1);
-    //
-    //                // 返回 0 ，向调用者表示 rehash 已经完成
-    //                return 0;
-    //            }
-    //
-    //            // 确保 rehashidx 没有越界
-    //            assert d.getHt(0).getSize() > d.getRehashidx();
-    //
-    //            // 略过数组中为空的索引，找到下一个非空索引
-    //            while (d.getHt(0).getTable()[d.getRehashidx()] == null)
-    //                d.setRehashidx(d.getRehashidx() + 1);
-    //
-    //            // 指向该索引的链表表头节点
-    //            DictEntry de = d.getHt(0).getTable()[d.getRehashidx()];
-    //
-    //            // 将链表中的所有节点迁移到新哈希表
-    //            while (de != null) {
-    //                // 保存下个节点的指针
-    //                DictEntry nextde = de.getNext();
-    //
-    //                // 计算新哈希表的哈希值，以及节点插入的索引位置
-    //                int h = dictHashKey(d, de.getKey()) & d.getHt(1).getSizeMask();
-    //
-    //                // 插入节点到新哈希表
-    //                de.setNext(d.getHt(1).getTable()[h]);
-    //                d.getHt(1).getTable()[h].setAddress(de.getAddress());
-    //
-    //                // 更新计数器
-    //                d.getHt(0).setUsed(d.getHt(0).getUsed() - 1);
-    //                d.getHt(1).setUsed(d.getHt(1).getUsed() + 1);
-    //
-    //                // 继续处理下个节点
-    //                de.setAddress(nextde.getAddress());
-    //            }
-    //            // 将刚迁移完的哈希表索引的指针设为空
-    //            d.getHt(0).getTable()[d.getRehashidx()].setAddress(0);
-    //
-    //            // 更新 rehash 索引
-    //            d.setRehashidx(d.getRehashidx() + 1);
-    //        }
-    //        return 1;
-    //    }
-    //
-    //    /**
-    //     * 返回以毫秒为单位的 UNIX 时间戳
-    //     *
-    //     * @return
-    //     */
-    //    public static long timeInMilliseconds() {
-    //        return System.currentTimeMillis();
-    //    }
-    //
-    //    /**
-    //     * 在给定毫秒数内，以 100 步为单位，对字典进行 rehash
-    //     *
-    //     * @param d
-    //     * @param ms
-    //     * @return
-    //     */
-    //    public static int dictRehashMilliseconds(Dict d, int ms) {
-    //        // 记录开始时间
-    //        long start = timeInMilliseconds();
-    //        int rehashes = 0;
-    //
-    //        while (dictRehash(d, 100) != 0) {
-    //            rehashes += 100;
-    //            // 如果时间已过，跳出
-    //            if (timeInMilliseconds() - start > ms)
-    //                break;
-    //        }
-    //
-    //        return rehashes;
-    //    }
-    //
-    //    /**
-    //     * 在字典不存在安全迭代器的情况下，对字典进行单步 rehash 。
-    //     * <p>
-    //     * 字典有安全迭代器的情况下不能进行 rehash ，
-    //     * 因为两种不同的迭代和修改操作可能会弄乱字典。
-    //     * <p>
-    //     * 这个函数被多个通用的查找、更新操作调用，
-    //     * 它可以让字典在被使用的同时进行 rehash 。
-    //     *
-    //     * @param d
-    //     */
-    //    private static void _dictRehashStep(Dict d) {
-    //        if (d.getIterators() == 0)
-    //            dictRehash(d, 1);
-    //    }
-    //
-    //    /**
-    //     * 尝试将给定键值对添加到字典中
-    //     * 只有给定键 key 不存在于字典时，添加操作才会成功
-    //     *
-    //     * @param d
-    //     * @param key
-    //     * @param val
-    //     * @return 添加成功返回 DICT_OK ，失败返回 DICT_ERR
-    //     */
-    //    public static int dictAdd(Dict d, BaseStruct key, BaseStruct val) {
-    //        // 尝试添加键到字典，并返回包含了这个键的新哈希节点
-    //        DictEntry entry = dictAddRaw(d, key);
-    //
-    //        // 键已存在，添加失败
-    //        if (entry == null)
-    //            return RedisConstant.DICT_ERR;
-    //
-    //        // 键不存在，设置节点的值
-    //        dictSetVal(d, entry, val);
-    //
-    //        // 添加成功
-    //        return RedisConstant.DICT_OK;
-    //    }
-    //
-    //    /**
-    //     * 尝试将键插入到字典中
-    //     * <p>
-    //     * 如果键已经在字典存在，那么返回 NULL
-    //     * <p>
-    //     * 如果键不存在，那么程序创建新的哈希节点，
-    //     * 将节点和键关联，并插入到字典，然后返回节点本身。
-    //     *
-    //     * @param d
-    //     * @param key
-    //     * @return
-    //     */
-    //    public static DictEntry dictAddRaw(Dict d, BaseStruct key) {
-    //        // 如果条件允许的话，进行单步 rehash
-    //        if (dictIsRehashing(d)) {
-    //            _dictRehashStep(d);
-    //        }
-    //
-    //        // 计算键在哈希表中的索引值
-    //        // 如果值为 -1 ，那么表示键已经存在
-    //        int index = 0;
-    //        if ((index = _dictKeyIndex(d, key)) == -1) {
-    //            return null;
-    //        }
-    //
-    //        // 如果字典正在 rehash ，那么将新键添加到 1 号哈希表
-    //        // 否则，将新键添加到 0 号哈希表
-    //        DictHt ht = dictIsRehashing(d) ? d.getHt(1) : d.getHt(0);
-    //
-    //        // 为新节点分配空间
-    //        DictEntry entry = new DictEntry();
-    //        long address = MemoryManager.alloc(MemoryManager.sizeOf(entry));
-    //
-    //        if (address == 0)
-    //            return null;
-    //
-    //        // 将新节点插入到链表表头
-    //        entry.setNext(ht.getTable()[index]);
-    //        ht.getTable()[index].setAddress(entry.getAddress());
-    //
-    //        // 更新哈希表已使用节点数量
-    //        ht.setUsed(ht.getUsed() + 1);
-    //
-    //        // 设置新节点的键
-    //        dictSetKey(d, entry, key);
-    //
-    //        return entry;
-    //    }
-    //
-    //    /**
-    //     * 将给定的键值对添加到字典中，如果键已经存在，那么删除旧有的键值对。
-    //     *
-    //     * @param d
-    //     * @param key
-    //     * @param val
-    //     * @return 如果键值对为全新添加，那么返回 1；如果键值对是通过对原有的键值对更新得来的，那么返回 0
-    //     */
-    //    public static int dictReplace(Dict d, BaseStruct key, BaseStruct val) {
-    //        DictEntry entry, auxentry;
-    //
-    //        //        // 尝试直接将键值对添加到字典
-    //        //        // 如果键 key 不存在的话，添加会成功
-    //        //        if (dictAdd(d, key, val) == RedisConstant.DICT_OK)
-    //        //            return 1;
-    //        //
-    //        //        // 运行到这里，说明键 key 已经存在，那么找出包含这个 key 的节点
-    //        //        entry = dictFind(d, key);
-    //        //
-    //        //        // 先保存原有的值的指针
-    //        //        auxentry = *entry;
-    //        //        // 然后设置新的值
-    //        //        // T = O(1)
-    //        //        dictSetVal(d, entry, val);
-    //        //        // 然后释放旧值
-    //        //        // T = O(1)
-    //        //        dictFreeVal(d, &auxentry);
-    //
-    //        return 0;
-    //    }
-    //
-    //    /**
-    //     * dictAddRaw() 根据给定 key 释放存在，执行以下动作：
-    //     * <p>
-    //     * 1) key 已经存在，返回包含该 key 的字典节点
-    //     * 2) key 不存在，那么将 key 添加到字典
-    //     * <p>
-    //     * 不论发生以上的哪一种情况，
-    //     * dictAddRaw() 都总是返回包含给定 key 的字典节点。
-    //     *
-    //     * @param d
-    //     * @param key
-    //     * @return
-    //     */
-    //    public static DictEntry dictReplaceRaw(Dict d, BaseStruct key) {
-    //        //        // 使用 key 在字典中查找节点
-    //        //        dictEntry * entry = dictFind(d, key);
-    //        //
-    //        //        // 如果节点找到了直接返回节点，否则添加并返回一个新节点
-    //        //        // T = O(N)
-    //        //        return entry ? entry : dictAddRaw(d, key);
-    //
-    //        return null;
-    //    }
-    //
+    /**
+     * 缩小给定字典
+     * 让它的已用节点数和字典大小之间的比率接近 1:1
+     *
+     * @return 成功创建体积更小的 ht[1] ，可以开始 resize 时，返回 true；false 表示字典已经在 rehash ，或者 dict_can_resize 为假
+     */
+    public boolean resize() {
+        // 不能在关闭 rehash 或者正在 rehash 的时候调用
+        if (!RedisConstant.DICT_CAN_RESIZE || isRehashing())
+            return false;
+
+        // 计算让比率接近 1：1 所需要的最少节点数量
+        int minimal = getHashTable(0).getUsed();
+        if (minimal < RedisConstant.DICT_HT_INITIAL_SIZE)
+            minimal = RedisConstant.DICT_HT_INITIAL_SIZE;
+
+        // 调整字典的大小
+        return expand(minimal);
+    }
+
+    /**
+     * 创建一个新的哈希表，并根据字典的情况，选择以下其中一个动作来进行：
+     * 1) 如果字典的 0 号哈希表为空，那么将新哈希表设置为 0 号哈希表
+     * 2) 如果字典的 0 号哈希表非空，那么将新哈希表设置为 1 号哈希表，并打开字典的 rehash 标识，使得程序可以开始对字典进行 rehash
+     *
+     * @param size
+     * @return size 参数不够大，或者 rehash 已经在进行时，返回 false；成功创建 0 号哈希表，或者 1 号哈希表时，返回 true
+     */
+    public boolean expand(int size) {
+        // 根据 size 参数，计算哈希表的大小
+        int realsize = _nextPower(size);
+
+        UnsafeHashTable hashTable0 = getHashTable(0);
+
+        // 不能在字典正在 rehash 时进行，size 的值也不能小于 0 号哈希表的当前已使用节点
+        if (isRehashing() || hashTable0.getUsed() > size)
+            return false;
+
+        boolean isInit = hashTable0.getTable() == null ? true : false;
+        UnsafeHashTable hashTable = isInit ? hashTable0 : getHashTable(1);
+
+        long entryArrayAdd = MemoryManager.malloc(new UnsafeEntry().sizeOf() * realsize);
+
+        if (entryArrayAdd == 0)
+            return false;
+
+        hashTable.setTableAddress(entryArrayAdd);
+
+        // 为哈希表分配空间，并将所有指针指向 NULL
+        hashTable.setSize(realsize);
+        hashTable.setSizeMask(realsize - 1);
+        hashTable.setUsed(0);
+
+        // 如果 0 号哈希表为空，那么这是一次初始化：程序将新哈希表赋给 0 号哈希表的指针，然后字典就可以开始处理键值对了。
+        if (isInit) {
+            setHashTable(0, hashTable);
+            return true;
+        }
+
+        // 如果 0 号哈希表非空，那么这是一次 rehash ：程序将新哈希表设置为 1 号哈希表，并将字典的 rehash 标识打开，让程序可以开始对字典进行 rehash
+        setHashTable(1, hashTable);
+        setRehashIdx(0);
+        return true;
+    }
+
+    /**
+     * 执行 N 步渐进式 rehash 。
+     * 返回 true 表示仍有键需要从 0 号哈希表移动到 1 号哈希表，
+     * 返回 false 则表示所有键都已经迁移完毕。
+     * 注意，每步 rehash 都是以一个哈希表索引（桶）作为单位的，
+     * 一个桶里可能会有多个节点，
+     * 被 rehash 的桶里的所有节点都会被移动到新哈希表。
+     *
+     * @param n
+     * @return
+     */
+    public boolean rehash(int n) {
+        // 只可以在 rehash 进行中时执行
+        if (!isRehashing())
+            return false;
+
+        // 进行 N 步迁移
+        while (n-- != 0) {
+            // 如果 0 号哈希表为空，那么表示 rehash 执行完毕
+            if (getHashTable(0).getUsed() == 0) {
+                // 释放 0 号哈希表 todo
+                //                zfree(d->ht[0].table);
+
+                // 将原来的 1 号哈希表设置为新的 0 号哈希表
+                setHashTable(0, getHashTable(1));
+
+                // 重置旧的 1 号哈希表
+                _reset(getHashTable(1));
+
+                // 关闭 rehash 标识
+                setRehashIdx(-1);
+
+                // 返回 0 ，向调用者表示 rehash 已经完成
+                return false;
+            }
+
+            // 确保 rehashidx 没有越界
+            assert getHashTable(0).getSize() > getRehashIdx();
+
+            // 略过数组中为空的索引，找到下一个非空索引
+            while (getHashTable(0).getTable()[getRehashIdx()] == null)
+                setRehashIdx(getRehashIdx() + 1);
+
+            // 指向该索引的链表表头节点
+            UnsafeEntry entry = getHashTable(0).getTable()[getRehashIdx()];
+
+            // 将链表中的所有节点迁移到新哈希表
+            while (entry != null) {
+                // 保存下个节点的指针
+                UnsafeObject nextde = entry.getNext();
+
+                // 计算新哈希表的哈希值，以及节点插入的索引位置
+                int h = hashKey(entry.getKey()) & getHashTable(1).getSizeMask();
+
+                // 插入节点到新哈希表
+                entry.setNext(getHashTable(1).getTable()[h]);
+                getHashTable(1).getTable()[h].setAddress(entry.getAddress());
+
+                // 更新计数器
+                getHashTable(0).setUsed(getHashTable(0).getUsed() - 1);
+                getHashTable(1).setUsed(getHashTable(1).getUsed() + 1);
+
+                // 继续处理下个节点
+                entry.setAddress(nextde.getAddress());
+            }
+            // 将刚迁移完的哈希表索引的指针设为空
+            getHashTable(0).getTable()[getRehashIdx()].setAddress(0);
+
+            // 更新 rehash 索引
+            setRehashIdx(getRehashIdx() + 1);
+        }
+        return true;
+    }
+
+    /**
+     * 返回以毫秒为单位的 UNIX 时间戳
+     *
+     * @return
+     */
+    public static long timeInMilliseconds() {
+        return System.currentTimeMillis();
+    }
+
+    /**
+     * 在给定毫秒数内，以 100 步为单位，对字典进行 rehash
+     *
+     * @param ms
+     * @return
+     */
+    public int rehashMilliseconds(int ms) {
+        // 记录开始时间
+        long start = timeInMilliseconds();
+        int rehashes = 0;
+
+        while (rehash(100)) {
+            rehashes += 100;
+            // 如果时间已过，跳出
+            if (timeInMilliseconds() - start > ms)
+                break;
+        }
+
+        return rehashes;
+    }
+
+    /**
+     * 在字典不存在安全迭代器的情况下，对字典进行单步 rehash 。
+     * <p>
+     * 字典有安全迭代器的情况下不能进行 rehash ，
+     * 因为两种不同的迭代和修改操作可能会弄乱字典。
+     * <p>
+     * 这个函数被多个通用的查找、更新操作调用，
+     * 它可以让字典在被使用的同时进行 rehash 。
+     */
+    private void _rehashStep() {
+        if (getIterators() == 0)
+            rehash(1);
+    }
+
+    /**
+     * 尝试将给定键值对添加到字典中
+     * 只有给定键 key 不存在于字典时，添加操作才会成功
+     * <p>
+     * 对应于dict.c/dictAdd
+     *
+     * @param key
+     * @param value
+     * @return 添加成功返回 DICT_OK ，失败返回 DICT_ERR
+     */
+    public boolean add(UnsafeObject key, UnsafeObject value) {
+        // 尝试添加键到字典，并返回包含了这个键的新哈希节点
+        UnsafeEntry entry = addRaw(key);
+
+        // 键已存在，添加失败
+        if (entry == null)
+            return false;
+
+        // 键不存在，设置节点的值
+        setValue(entry, value);
+
+        // 添加成功
+        return true;
+    }
+
+    /**
+     * 尝试将键插入到字典中
+     * <p>
+     * 如果键已经在字典存在，那么返回 NULL
+     * <p>
+     * 如果键不存在，那么程序创建新的哈希节点，
+     * 将节点和键关联，并插入到字典，然后返回节点本身。
+     *
+     * @param key
+     * @return
+     */
+    public UnsafeEntry addRaw(UnsafeObject key) {
+        // 如果条件允许的话，进行单步 rehash
+        if (this.isRehashing())
+            _rehashStep();
+
+        // 计算键在哈希表中的索引值，如果值为 -1 ，那么表示键已经存在
+        int index = 0;
+        if ((index = _keyIndex(key)) == -1)
+            return null;
+
+        // 如果字典正在 rehash ，那么将新键添加到 1 号哈希表
+        // 否则，将新键添加到 0 号哈希表
+        UnsafeHashTable ht = isRehashing() ? getHashTable(1) : getHashTable(0);
+
+        // 为新节点分配空间
+        UnsafeEntry entry = new UnsafeEntry();
+        long entryAdd = MemoryManager.malloc(entry.sizeOf());
+
+        if (address == 0)
+            return null;
+
+        entry.setAddress(entryAdd);
+        // 将新节点插入到链表表头
+        entry.setNext(ht.getEntry(index));
+        // 更新哈希表已使用节点数量
+        ht.setUsed(ht.getUsed() + 1);
+        ht.addEntry(index, entry);
+
+        // 设置新节点的键
+        setKey(entry, key);
+
+        return entry;
+    }
+
+    /**
+     * 将给定的键值对添加到字典中，如果键已经存在，那么删除旧有的键值对。
+     *
+     * @param key
+     * @param value
+     * @return 如果键值对为全新添加，那么返回 true；如果键值对是通过对原有的键值对更新得来的，那么返回 false
+     */
+    public boolean replace(UnsafeObject key, UnsafeObject value) {
+        UnsafeObject entry, auxentry;
+
+        // 尝试直接将键值对添加到字典
+        // 如果键 key 不存在的话，添加会成功
+        if (add(key, value))
+            return true;
+
+        // 运行到这里，说明键 key 已经存在，那么找出包含这个 key 的节点
+        //        entry = dictFind(d, key);
+        //
+        //        // 先保存原有的值的指针
+        //        auxentry = *entry;
+        //        // 然后设置新的值
+        //        // T = O(1)
+        //        dictSetVal(d, entry, val);
+        //        // 然后释放旧值
+        //        // T = O(1)
+        //        dictFreeVal(d, &auxentry);
+
+        return false;
+    }
+
+    /**
+     * dictAddRaw() 根据给定 key 释放存在，执行以下动作：
+     * <p>
+     * 1) key 已经存在，返回包含该 key 的字典节点
+     * 2) key 不存在，那么将 key 添加到字典
+     * <p>
+     * 不论发生以上的哪一种情况，
+     * dictAddRaw() 都总是返回包含给定 key 的字典节点。
+     *
+     * @param key
+     * @return
+     */
+    public UnsafeObject replaceRaw(UnsafeObject key) {
+        // 使用 key 在字典中查找节点
+        UnsafeObject entry = null;// todo    find(key);
+
+        // 如果节点找到了直接返回节点，否则添加并返回一个新节点
+        return entry == null ? addRaw(key) : entry;
+    }
+
     //    /**
     //     * 查找并删除包含给定键的节点
     //     * <p>
@@ -727,53 +798,49 @@ public class UnsafeMap extends UnsafeObject {
     //        //        // 释放节点结构
     //        //        zfree(d);
     //    }
-    //
-    //    /**
-    //     * 返回字典中包含键 key 的节点
-    //     *
-    //     * @param key
-    //     * @return 找到返回节点，找不到返回 NULL
-    //     */
-    //    public static DictEntry dictFind(Dict d, final BaseStruct key) {
-    //        //        dictEntry *he;
-    //        //        unsigned int h, idx, table;
-    //        //
-    //        //        // 字典（的哈希表）为空
-    //        //        if (d->ht[0].size == 0) return null;
-    //        //
-    //        //        // 如果条件允许的话，进行单步 rehash
-    //        //        if (dictIsRehashing(d)) _dictRehashStep(d);
-    //        //
-    //        //        // 计算键的哈希值
-    //        //        h = dictHashKey(d, key);
-    //        //        // 在字典的哈希表中查找这个键
-    //        //        // T = O(1)
-    //        //        for (table = 0; table <= 1; table++) {
-    //        //
-    //        //            // 计算索引值
-    //        //            idx = h & d->ht[table].sizemask;
-    //        //
-    //        //            // 遍历给定索引上的链表的所有节点，查找 key
-    //        //            he = d->ht[table].table[idx];
-    //        //            // T = O(1)
-    //        //            while(he) {
-    //        //
-    //        //                if (dictCompareKeys(d, key, he->key))
-    //        //                    return he;
-    //        //
-    //        //                he = he->next;
-    //        //            }
-    //        //
-    //        //            // 如果程序遍历完 0 号哈希表，仍然没找到指定的键的节点
-    //        //            // 那么程序会检查字典是否在进行 rehash ，
-    //        //            // 然后才决定是直接返回 NULL ，还是继续查找 1 号哈希表
-    //        //            if (!dictIsRehashing(d)) return NULL;
-    //        //        }
-    //
-    //        // 进行到这里时，说明两个哈希表都没找到
-    //        return null;
-    //    }
-    //
+
+    /**
+     * 返回字典中包含键 key 的节点
+     *
+     * @param key
+     * @return 找到返回节点，找不到返回 NULL
+     */
+    public UnsafeEntry find(final UnsafeObject key) {
+        // 字典（的哈希表）为空
+        if (getHashTable(0).getSize() == 0)
+            return null;
+
+        // 如果条件允许的话，进行单步 rehash
+        if (isRehashing())
+            _rehashStep();
+
+        // 计算键的哈希值
+        int h = hashKey(key);
+        // 在字典的哈希表中查找这个键
+        for (int table = 0; table <= 1; table++) {
+            // 计算索引值
+            int idx = h & getHashTable(table).getSizeMask();
+
+            // 遍历给定索引上的链表的所有节点，查找 key
+            UnsafeEntry entry = getHashTable(table).getEntry(idx);
+            while (entry != null) {
+                if (compareKeys(key, entry.getKey()))
+                    return entry;
+
+                entry = entry.getNext();
+            }
+
+            // 如果程序遍历完 0 号哈希表，仍然没找到指定的键的节点
+            // 那么程序会检查字典是否在进行 rehash ，
+            // 然后才决定是直接返回 NULL ，还是继续查找 1 号哈希表
+            if (!isRehashing())
+                return null;
+        }
+
+        // 进行到这里时，说明两个哈希表都没找到
+        return null;
+    }
+
     //    /**
     //     * 获取包含给定键的节点的值
     //     *
@@ -1174,135 +1241,136 @@ public class UnsafeMap extends UnsafeObject {
     //        //        return v;
     //        return 0;
     //    }
-    //
-    //    //----  私有协议
-    //
-    //    /**
-    //     * 根据需要，初始化字典（的哈希表），或者对字典（的现有哈希表）进行扩展
-    //     *
-    //     * @param d
-    //     * @return
-    //     */
-    //    private static int _dictExpandIfNeeded(Dict d) {
-    //        // 渐进式 rehash 已经在进行了，直接返回
-    //        if (dictIsRehashing(d))
-    //            return RedisConstant.DICT_OK;
-    //
-    //        // 如果字典（的 0 号哈希表）为空，那么创建并返回初始化大小的 0 号哈希表
-    //        if (d.getHt(0).getSize() == 0)
-    //            return dictExpand(d, RedisConstant.DICT_HT_INITIAL_SIZE);
-    //
-    //        // 以下两个条件之一为真时，对字典进行扩展
-    //        // 1）字典已使用节点数和字典大小之间的比率接近 1：1 并且 dict_can_resize 为真
-    //        // 2）已使用节点数和字典大小之间的比率超过 dict_force_resize_ratio
-    //        if (d.getHt(0).getUsed() >= d.getHt(0).getSize() && (RedisConstant.DICT_CAN_RESIZE != 0
-    //                || d.getHt(0).getUsed() / d.getHt(0).getSize()
-    //                > RedisConstant.DICT_FORCE_RESIZE_RATIO)) {
-    //            // 新哈希表的大小至少是目前已使用节点数的两倍
-    //            return dictExpand(d, d.getHt(0).getUsed() * 2);
-    //        }
-    //
-    //        return RedisConstant.DICT_OK;
-    //    }
-    //
-    //    /**
-    //     * 计算第一个大于等于 size 的 2 的 N 次方，用作哈希表的值
-    //     *
-    //     * @param size
-    //     * @return
-    //     */
-    //    private static int _dictNextPower(int size) {
-    //        if (size >= Integer.MAX_VALUE) {
-    //            return Integer.MAX_VALUE;
-    //        }
-    //
-    //        int i = RedisConstant.DICT_HT_INITIAL_SIZE;
-    //        while (true) {
-    //            if (i >= size)
-    //                return i;
-    //            i *= 2;
-    //        }
-    //    }
-    //
-    //    /**
-    //     * 返回可以将 key 插入到哈希表的索引位置
-    //     * 如果 key 已经存在于哈希表，那么返回 -1
-    //     * <p>
-    //     * 如果字典正在进行 rehash ，那么总是返回 1 号哈希表的索引。
-    //     * 因为在字典进行 rehash 时，新节点总是插入到 1 号哈希表。
-    //     *
-    //     * @param d
-    //     * @param key
-    //     * @return
-    //     */
-    //    private static int _dictKeyIndex(Dict d, final BaseStruct key) {
-    //        int h = 0, idx = 0, table = 0;
-    //        DictEntry he = null;
-    //
-    //        // 单步 rehash
-    //        if (_dictExpandIfNeeded(d) == RedisConstant.DICT_ERR)
-    //            return -1;
-    //
-    //        // 计算 key 的哈希值
-    //        h = dictHashKey(d, key);
-    //        for (table = 0; table <= 1; table++) {
-    //            // 计算索引值
-    //            idx = h & d.getHt(table).getSizeMask();
-    //
-    //            // 查找 key 是否存在
-    //            he = d.getHt(table).getTable()[idx];
-    //            while (he != null) {
-    //                if (dictCompareKeys(d, key, he.getKey()))
-    //                    return -1;
-    //                he = he.getNext();
-    //            }
-    //
-    //            // 如果运行到这里时，说明 0 号哈希表中所有节点都不包含 key
-    //            // 如果这时 rehahs 正在进行，那么继续对 1 号哈希表进行 rehash
-    //            if (!dictIsRehashing(d))
-    //                break;
-    //        }
-    //
-    //        // 返回索引值
-    //        return idx;
-    //    }
-    //
+
+    //----  私有协议
+
+    /**
+     * 根据需要，初始化字典（的哈希表），或者对字典（的现有哈希表）进行扩展
+     *
+     * @return
+     */
+    private boolean _expandIfNeeded() {
+        // 渐进式 rehash 已经在进行了，直接返回
+        if (isRehashing())
+            return true;
+
+        int used = getHashTable(0).getUsed();
+        int size = getHashTable(0).getSize();
+
+        // 如果字典（的 0 号哈希表）为空，那么创建并返回初始化大小的 0 号哈希表
+        if (size == 0)
+            return expand(RedisConstant.DICT_HT_INITIAL_SIZE);
+
+        // 以下两个条件之一为真时，对字典进行扩展
+        // 1）字典已使用节点数和字典大小之间的比率接近 1：1 并且 dict_can_resize 为真
+        // 2）已使用节点数和字典大小之间的比率超过 dict_force_resize_ratio
+        if ((used >= size && RedisConstant.DICT_CAN_RESIZE) || (used / size
+                > RedisConstant.DICT_FORCE_RESIZE_RATIO)) {
+            // 新哈希表的大小至少是目前已使用节点数的两倍
+            return expand(getHashTable(0).getUsed() * 2);
+        }
+
+        return true;
+    }
+
+    /**
+     * 计算第一个大于等于 size 的 2 的 N 次方，用作哈希表的值
+     *
+     * @param size
+     * @return
+     */
+    private static int _nextPower(int size) {
+        if (size >= Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+
+        int i = RedisConstant.DICT_HT_INITIAL_SIZE;
+        while (true) {
+            if (i >= size)
+                return i;
+            //            i *= 2;
+            i = i << 1;
+        }
+    }
+
+    /**
+     * 返回可以将 key 插入到哈希表的索引位置
+     * 如果 key 已经存在于哈希表，那么返回 -1
+     * <p>
+     * 如果字典正在进行 rehash ，那么总是返回 1 号哈希表的索引。
+     * 因为在字典进行 rehash 时，新节点总是插入到 1 号哈希表。
+     *
+     * @param key
+     * @return
+     */
+    private int _keyIndex(final UnsafeObject key) {
+        int idx = 0;
+
+        // 单步 rehash
+        if (!_expandIfNeeded())
+            return -1;
+
+        // 计算 key 的哈希值
+        int h = hashKey(key);
+        for (int table = 0; table <= 1; table++) {
+            // 计算索引值
+            idx = h & getHashTable(table).getSizeMask();
+
+            // 查找 key 是否存在
+            UnsafeEntry entry = getHashTable(table).getEntry(idx);
+            while (entry != null) {
+                if (compareKeys(key, entry.getKey()))
+                    return -1;
+
+                entry = entry.getNext();
+            }
+
+            // 如果运行到这里时，说明 0 号哈希表中所有节点都不包含 key
+            // 如果这时 rehahs 正在进行，那么继续对 1 号哈希表进行 rehash
+            if (!isRehashing())
+                break;
+        }
+
+        // 返回索引值
+        return idx;
+    }
 
     /**
      * 初始化哈希表
      *
      * @return
      */
-    private static int _dictInit(UnsafeMap d, Object type, Object privData) {
+    private static boolean _init(UnsafeMap d, Object type, Object privData) {
         // 初始化两个哈希表的各项属性值，但暂时还不分配内存给哈希表数组
-        d.setHashTable(0, new UnsafeHashTable(d.getAddress() + Unsafe.ARRAY_INT_INDEX_SCALE * 2));
-        d.setHashTable(1, new UnsafeHashTable(
-                d.getAddress() + Unsafe.ARRAY_INT_INDEX_SCALE * 5 + Unsafe.ARRAY_LONG_INDEX_SCALE));
+        //        d.setHashTable(0, new UnsafeHashTable(d.getAddress() + Unsafe.ARRAY_INT_INDEX_SCALE * 2));
+        //        d.setHashTable(1, new UnsafeHashTable(
+        //                d.getAddress() + Unsafe.ARRAY_INT_INDEX_SCALE * 5 + Unsafe.ARRAY_LONG_INDEX_SCALE));
         //默认即为0，可以省略
-        _dictReset(d.getHashTable(0));
-        _dictReset(d.getHashTable(1));
+        _reset(d.getHashTable(0));
+        _reset(d.getHashTable(1));
 
         // 设置类型特定函数 todo
         //        d.setType(type);
         // 设置私有数据 todo
         //        d.setPrivData(privData);
+
         // 设置哈希表 rehash 状态
         d.setRehashIdx(-1);
         // 设置字典的安全迭代器数量
         d.setIterators(0);
 
-        return RedisConstant.DICT_OK;
+        return true;
     }
 
-    private static void _dictReset(UnsafeHashTable ht) {
+    private static void _reset(UnsafeHashTable ht) {
         //设置默认值
-        ht.setTable(null);
+        //        ht.setTable(null);
         ht.setSize(0);
         ht.setSizeMask(0);
         ht.setUsed(0);
     }
 
-    public static int dictIntHashFunction(int key) {
+    public static int intHashFunction(int key) {
         key += ~(key << 15);
         key ^= (key >> 10);
         key += (key << 3);
@@ -1312,26 +1380,40 @@ public class UnsafeMap extends UnsafeObject {
         return key;
     }
 
-    //    public static int dictIdentityHashFunction(int key) {
-    //        return key;
-    //    }
-    //
-    //    //-----  macro
-    //
-    //    // 释放给定字典节点的值
-    //    private static void dictFreeVal(Dict d, DictEntry entry) {
-    //        if (d.getType() != null)
-    //            d.getType().valDestructor(d.getPrivData(), entry.getValue());
-    //    }
-    //
-    //    // 设置给定字典节点的值
-    //    private static void dictSetVal(Dict d, DictEntry entry, BaseStruct val) {
-    //        if (d.getType() != null)
-    //            entry.setValue(d.getType().valDup(d.getPrivData(), val));
-    //        else
-    //            entry.setValue(val);
-    //    }
-    //
+    public int identityHashFunction(int key) {
+        return key;
+    }
+
+    //-----  macro
+
+    // 释放给定字典节点的值
+    private void freeVale(UnsafeEntry entry) {
+        //        if (getType() != null) {
+        //todo
+        //            getType().valDestructor(getPrivData(), entry.getValue());
+        //        }
+    }
+
+    // 设置给定字典节点的键
+    private void setKey(UnsafeEntry entry, UnsafeObject key) {
+        if (getType() != null) {
+            //todo
+            //            entry.setKey(getType().keyDup(getPrivData(), key));
+        } else {
+            entry.setKey(key);
+        }
+    }
+
+    // 设置给定字典节点的值
+    private void setValue(UnsafeEntry entry, UnsafeObject value) {
+        if (getType() != null) {
+            //todo
+            //            entry.setValue(getType().valDup(getPrivData(), value));
+        } else {
+            entry.setValue(value);
+        }
+    }
+
     //    // 将一个有符号整数设为节点的值
     //    private static void dictSetSignedIntegerVal(DictEntry entry, BaseStruct val) {
     //        entry.setValue(val);
@@ -1341,65 +1423,60 @@ public class UnsafeMap extends UnsafeObject {
     //    private static void dictSetUnsignedIntegerVal(DictEntry entry, BaseStruct val) {
     //        entry.setValue(val);
     //    }
-    //
-    //    // 释放给定字典节点的键
-    //    private static void dictFreeKey(Dict d, DictEntry entry) {
-    //        if (d.getType() != null)
-    //            d.getType().keyDestructor(d.getPrivData(), entry.getKey());
-    //    }
-    //
-    //    // 设置给定字典节点的键
-    //    private static void dictSetKey(Dict d, DictEntry entry, BaseStruct key) {
-    //        if (d.getType() != null)
-    //            entry.setKey(d.getType().keyDup(d.getPrivData(), key));
-    //        else
-    //            entry.setKey(key);
-    //    }
-    //
-    //    // 比对两个键
-    //    private static boolean dictCompareKeys(Dict d, BaseStruct key1, BaseStruct key2) {
-    //        return d.getType() != null ?
-    //                d.getType().keyCompare(d.getPrivData(), key1, key2) :
-    //                (key1 == key2);
-    //    }
-    //
-    //    // 计算给定键的哈希值
-    //    private static int dictHashKey(Dict d, BaseStruct key) {
-    //        return d.getType().hashFunction(key);
-    //    }
-    //
-    //    // 返回获取给定节点的键
-    //    private static BaseStruct dictGetKey(DictEntry he) {
-    //        return he.getKey();
-    //    }
-    //
-    //    // 返回获取给定节点的值
-    //    private static BaseStruct dictGetVal(DictEntry he) {
-    //        return he.getValue();
-    //    }
-    //
+
+    // 释放给定字典节点的键
+    private void freeKey(UnsafeEntry entry) {
+        //todo
+        //        if (getType() != null)
+        //            getType().keyDestructor(getPrivData(), entry.getKey());
+    }
+
+    // 比对两个键
+    private boolean compareKeys(UnsafeObject key1, UnsafeObject key2) {
+        //        return getType() != null ? getType().keyCompare(getPrivData(), key1, key2) : (key1 == key2);
+        //todo
+        return key1.getAddress() == key2.getAddress();
+    }
+
+    // 计算给定键的哈希值
+    private int hashKey(UnsafeObject key) {
+        //todo
+        //        return getType().hashFunction(key);
+        return 0;
+    }
+
+    // 返回获取给定节点的键
+    private UnsafeObject getKey(UnsafeEntry he) {
+        return he.getKey();
+    }
+
+    // 返回获取给定节点的值
+    private UnsafeObject getValue(UnsafeEntry he) {
+        return he.getValue();
+    }
+
     //    // 返回获取给定节点的有符号整数值
-    //    private static BaseStruct dictGetSignedIntegerVal(DictEntry he) {
+    //    private UnsafeObject getSignedIntegerVal(UnsafeEntry he) {
     //        return he.getValue();
     //    }
     //
     //    // 返回给定节点的无符号整数值
-    //    private static BaseStruct dictGetUnsignedIntegerVal(DictEntry he) {
+    //    private UnsafeObject dictGetUnsignedIntegerVal(UnsafeEntry he) {
     //        return he.getValue();
     //    }
-    //
-    //    // 返回给定字典的大小
-    //    private static int dictSlots(Dict d) {
-    //        return d.getHt(0).getSize() + d.getHt(1).getSize();
-    //    }
-    //
-    //    // 返回字典的已有节点数量
-    //    private static int dictSize(Dict d) {
-    //        return d.getHt(0).getUsed() + d.getHt(1).getUsed();
-    //    }
-    //
-    //    // 查看字典是否正在 rehash
-    //    private static boolean dictIsRehashing(Dict ht) {
-    //        return ht.getRehashidx() != -1;
-    //    }
+
+    // 返回给定字典的大小
+    private int slots() {
+        return getHashTable(0).getSize() + getHashTable(1).getSize();
+    }
+
+    // 返回字典的已有节点数量
+    private int size() {
+        return getHashTable(0).getUsed() + getHashTable(1).getUsed();
+    }
+
+    // 查看字典是否正在 rehash
+    private boolean isRehashing() {
+        return this.getRehashIdx() != -1;
+    }
 }

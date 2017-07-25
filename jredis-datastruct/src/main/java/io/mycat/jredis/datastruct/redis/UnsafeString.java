@@ -15,20 +15,28 @@ import java.util.Arrays;
  * @author: gaozhiwen
  */
 public class UnsafeString extends UnsafeObject {
-    // private int length;//已经使用的char长度 offset:0
-    // private int free;//剩余空间 offset:int
-    // private char[] value;//数据段 offset:int*2
+    //    private int length;//已经使用的char长度 offset:0
+    //    private int free;//剩余空间 offset:int
+    //    private char[] value;//数据段 offset:int*2
 
     @Override public int sizeOf() {
         return Unsafe.ARRAY_SHORT_INDEX_SCALE * 2;
     }
 
     public int sizeOf(int charInitLen) {
-        return Unsafe.ARRAY_SHORT_INDEX_SCALE * 2 + Unsafe.ARRAY_CHAR_INDEX_SCALE * charInitLen;
+        return Unsafe.ARRAY_INT_INDEX_SCALE * 2 + Unsafe.ARRAY_CHAR_INDEX_SCALE * charInitLen;
     }
 
     @Override public int freeSize() {
         return sizeOf(getLength() + getFree());
+    }
+
+    @Override public String toString() {
+        return "UnsafeString{address=" + address +
+                ", length=" + getLength() +
+                ", free=" + getFree() +
+                ", value=" + Arrays.toString(getValue()) +
+                '}';
     }
 
     public int getLength() {
@@ -63,12 +71,12 @@ public class UnsafeString extends UnsafeObject {
         if (value.length >= length) {
             UnsafeUtil.getUnsafe().copyMemory(value, Unsafe.ARRAY_CHAR_BASE_OFFSET, null,
                     address + Unsafe.ARRAY_INT_INDEX_SCALE * 2,
-                    length * Unsafe.ARRAY_CHAR_INDEX_SCALE);
+                    Unsafe.ARRAY_CHAR_INDEX_SCALE * length);
         } else {
             UnsafeUtil.getUnsafe()
                     .copyMemory(Arrays.copyOf(value, length), Unsafe.ARRAY_CHAR_BASE_OFFSET, null,
                             address + Unsafe.ARRAY_INT_INDEX_SCALE * 2,
-                            length * Unsafe.ARRAY_CHAR_INDEX_SCALE);
+                            Unsafe.ARRAY_CHAR_INDEX_SCALE * length);
         }
     }
 

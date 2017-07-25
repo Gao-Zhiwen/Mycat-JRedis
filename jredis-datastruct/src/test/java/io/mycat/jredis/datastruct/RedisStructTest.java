@@ -25,7 +25,7 @@ public class RedisStructTest {
         System.out.println(unsafeString.getValue());
     }
 
-    @Test public void mapTest() {
+    @Test public void mapCreateTest() {
         UnsafeMap map = UnsafeMap.dictCreate(null, null);
         map.setIterators(1);
         System.out.println(map.getIterators());
@@ -41,5 +41,13 @@ public class RedisStructTest {
         System.out.println("map address: " + map.getAddress());
         System.out.println("hash table address: " + table1.getAddress());
         System.out.println("hash table address: " + table2.getAddress());
+    }
+
+    @Test public void mapAddTest() {
+        UnsafeMap map = UnsafeMap.dictCreate(null, null);
+        UnsafeObject key = UnsafeString.strNew("hello".toCharArray());
+        UnsafeObject value = UnsafeString.strNew("world".toCharArray());
+        map.add(key, value);
+        System.out.println(map);
     }
 }

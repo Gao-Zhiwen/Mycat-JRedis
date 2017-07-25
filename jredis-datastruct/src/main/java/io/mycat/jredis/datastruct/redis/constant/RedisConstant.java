@@ -14,7 +14,7 @@ public class RedisConstant {
     public static final int DICT_HT_INITIAL_SIZE = 4;// 哈希表的初始化大小
     public static final int DICT_OK = 0;// 操作成功
     public static final int DICT_ERR = 1;// 操作失败（或出错）
-    public static final int DICT_CAN_RESIZE = 1;// 指示字典是否启用 rehash 的标识
+    public static final boolean DICT_CAN_RESIZE = true;// 指示字典是否启用 rehash 的标识
     public static final int DICT_FORCE_RESIZE_RATIO = 5;// 强制 rehash 的比率
     public static final int DICT_HASH_FUNCTION_SEED = 5381;
 }
