@@ -14,18 +14,18 @@ import java.util.Arrays;
  * @date: 23/07/2017
  * @author: gaozhiwen
  */
-public class UnsafeMap extends UnsafeObject {
+public class UnsafeDict extends UnsafeObject {
     //        private UnsafeHashTable[] ht;//哈希表
     //        private int iterators;//目前正在运行的安全迭代器的数量
     //        private int reHashIdx;//rehash索引，当rehash不在进行时值为-1
 
-    private Object privData;//私有数据
-    private Object type;//类型特定函数
+    private UnsafeObject privData;//私有数据
+    private Type type;//类型特定函数
 
-    public UnsafeMap() {
+    public UnsafeDict() {
     }
 
-    public UnsafeMap(long address) {
+    public UnsafeDict(long address) {
         super.address = address;
     }
 
@@ -39,9 +39,9 @@ public class UnsafeMap extends UnsafeObject {
     }
 
     @Override public String toString() {
-        return "UnsafeMap{address=" + address + ", ht[0]=" + getHashTable(0) + ", ht[1]="
+        return "UnsafeDict{address=" + address + ", ht[0]=" + getHashTable(0) + ", ht[1]="
                 + getHashTable(1) + ", iterators=" + getIterators() + ", reHashIdx="
-                + getRehashIdx() + ", privData=" + privData + ", type=" + type + '}';
+                + getRehashIdx() + '}';
     }
 
     public int getIterators() {
@@ -81,19 +81,19 @@ public class UnsafeMap extends UnsafeObject {
         }
     }
 
-    public Object getPrivData() {
+    public UnsafeObject getPrivData() {
         return privData;
     }
 
-    public void setPrivData(Object privData) {
+    public void setPrivData(UnsafeObject privData) {
         this.privData = privData;
     }
 
-    public Object getType() {
+    public Type getType() {
         return type;
     }
 
-    public void setType(Object type) {
+    public void setType(Type type) {
         this.type = type;
     }
 
@@ -207,27 +207,14 @@ public class UnsafeMap extends UnsafeObject {
             return table;
         }
 
-        public void setTable(UnsafeEntry[] unsafeEntries) {
-            long entryAdd = 0;
-
-            if (unsafeEntries != null)
-                entryAdd = unsafeEntries[0].getAddress();
-
-            UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3, entryAdd);
-        }
-
         public void setTableAddress(long tableAdd) {
             UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3, tableAdd);
         }
 
-        //        public void setTable(UnsafeEntry unsafeEntry) {
-        //            long entryAdd = 0;
-        //
-        //            if (unsafeEntry != null)
-        //                entryAdd = unsafeEntry.getAddress();
-        //
-        //            UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3, entryAdd);
-        //        }
+        public void setEntryPoint(int index, long pointAddress) {
+            UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_INT_INDEX_SCALE * 3
+                    + Unsafe.ARRAY_LONG_INDEX_SCALE * index, pointAddress);
+        }
     }
 
 
@@ -248,7 +235,7 @@ public class UnsafeMap extends UnsafeObject {
         }
 
         @Override public int freeSize() {
-            return 0;
+            return Unsafe.ARRAY_LONG_INDEX_SCALE * 3;
         }
 
         @Override public String toString() {
@@ -256,19 +243,35 @@ public class UnsafeMap extends UnsafeObject {
                     + ", next=" + getNext() + '}';
         }
 
-        public UnsafeString getKey() {
+        public void setEntry(UnsafeEntry entry) {
+            if (entry == null || entry.address == 0) {
+                setKey(null);
+                setValue(null);
+                setNext(null);
+                return;
+            }
+
+            setKey(entry.getKey());
+            setValue(entry.getValue());
+            setNext(entry.getNext());
+        }
+
+        public UnsafeSds getKey() {
             long keyAdd = UnsafeUtil.getUnsafe().getLong(address);
 
             if (keyAdd == 0)
                 return null;
 
-            UnsafeString key = new UnsafeString();
+            UnsafeSds key = new UnsafeSds();
             key.setAddress(keyAdd);
             return key;
         }
 
         public void setKey(UnsafeObject key) {
-            UnsafeUtil.getUnsafe().putLong(address, key.getAddress());
+            if (key == null)
+                UnsafeUtil.getUnsafe().putLong(address, 0L);
+            else
+                UnsafeUtil.getUnsafe().putLong(address, key.getAddress());
         }
 
         public UnsafeObject getValue() {
@@ -291,8 +294,11 @@ public class UnsafeMap extends UnsafeObject {
         }
 
         public void setValue(UnsafeObject value) {
-            UnsafeUtil.getUnsafe()
-                    .putLong(address + Unsafe.ARRAY_LONG_INDEX_SCALE, value.getAddress());
+            if (value == null)
+                UnsafeUtil.getUnsafe().putLong(address + Unsafe.ARRAY_LONG_INDEX_SCALE, 0L);
+            else
+                UnsafeUtil.getUnsafe()
+                        .putLong(address + Unsafe.ARRAY_LONG_INDEX_SCALE, value.getAddress());
         }
 
         public UnsafeEntry getNext() {
@@ -324,8 +330,8 @@ public class UnsafeMap extends UnsafeObject {
      * @param privData
      * @return
      */
-    public static UnsafeMap dictCreate(Object type, Object privData) {
-        UnsafeMap map = new UnsafeMap();
+    public static UnsafeDict dictCreate(Type type, UnsafeObject privData) {
+        UnsafeDict map = new UnsafeDict();
         long mapAdd = MemoryManager.malloc(map.sizeOf());
 
         if (mapAdd == 0)
@@ -377,7 +383,8 @@ public class UnsafeMap extends UnsafeObject {
         boolean isInit = hashTable0.getTable() == null ? true : false;
         UnsafeHashTable hashTable = isInit ? hashTable0 : getHashTable(1);
 
-        long entryArrayAdd = MemoryManager.malloc(new UnsafeEntry().sizeOf() * realsize);
+        //new UnsafeEntry().sizeOf()
+        long entryArrayAdd = MemoryManager.malloc(Unsafe.ARRAY_LONG_INDEX_SCALE * 3 * realsize);
 
         if (entryArrayAdd == 0)
             return false;
@@ -403,14 +410,10 @@ public class UnsafeMap extends UnsafeObject {
 
     /**
      * 执行 N 步渐进式 rehash 。
-     * 返回 true 表示仍有键需要从 0 号哈希表移动到 1 号哈希表，
-     * 返回 false 则表示所有键都已经迁移完毕。
-     * 注意，每步 rehash 都是以一个哈希表索引（桶）作为单位的，
-     * 一个桶里可能会有多个节点，
-     * 被 rehash 的桶里的所有节点都会被移动到新哈希表。
+     * 注意，每步 rehash 都是以一个哈希表索引（桶）作为单位的，一个桶里可能会有多个节点，被 rehash 的桶里的所有节点都会被移动到新哈希表。
      *
      * @param n
-     * @return
+     * @return true 表示仍有键需要从 0 号哈希表移动到 1 号哈希表，false 则表示所有键都已经迁移完毕。
      */
     public boolean rehash(int n) {
         // 只可以在 rehash 进行中时执行
@@ -419,10 +422,14 @@ public class UnsafeMap extends UnsafeObject {
 
         // 进行 N 步迁移
         while (n-- != 0) {
+            UnsafeHashTable hashTable0 = getHashTable(0);
+
             // 如果 0 号哈希表为空，那么表示 rehash 执行完毕
-            if (getHashTable(0).getUsed() == 0) {
+            if (hashTable0.getUsed() == 0) {
                 // 释放 0 号哈希表 todo
                 //                zfree(d->ht[0].table);
+                MemoryManager.free(hashTable0.getEntry(0).getAddress(),
+                        hashTable0.getSize() * hashTable0.getEntry(0).freeSize());
 
                 // 将原来的 1 号哈希表设置为新的 0 号哈希表
                 setHashTable(0, getHashTable(1));
@@ -438,36 +445,49 @@ public class UnsafeMap extends UnsafeObject {
             }
 
             // 确保 rehashidx 没有越界
-            assert getHashTable(0).getSize() > getRehashIdx();
+            assert hashTable0.getSize() > getRehashIdx();
+
+            UnsafeHashTable hashTable1 = getHashTable(1);
+            UnsafeEntry[] entries0 = hashTable0.getTable();
+            //            UnsafeEntry[] entries1 = hashTable1.getTable();
 
             // 略过数组中为空的索引，找到下一个非空索引
-            while (getHashTable(0).getTable()[getRehashIdx()] == null)
+            while (entries0[getRehashIdx()] == null)
                 setRehashIdx(getRehashIdx() + 1);
 
             // 指向该索引的链表表头节点
-            UnsafeEntry entry = getHashTable(0).getTable()[getRehashIdx()];
+            UnsafeEntry entry = entries0[getRehashIdx()];
 
             // 将链表中的所有节点迁移到新哈希表
             while (entry != null) {
                 // 保存下个节点的指针
                 UnsafeObject nextde = entry.getNext();
+                //                UnsafeHashTable hashTable1 = getHashTable(1);
 
                 // 计算新哈希表的哈希值，以及节点插入的索引位置
-                int h = hashKey(entry.getKey()) & getHashTable(1).getSizeMask();
+                int h = hashKey(entry.getKey()) & hashTable1.getSizeMask();
 
                 // 插入节点到新哈希表
-                entry.setNext(getHashTable(1).getTable()[h]);
-                getHashTable(1).getTable()[h].setAddress(entry.getAddress());
+                entry.setNext(hashTable1.getEntry(h));
+                //                entries1[h].setEntry(entry);
+                hashTable1.addEntry(h, entry);
+                //                hashTable1.setEntryPoint(h, entry.getAddress());
+                //                entries1[h].setAddress(entry.getAddress());
 
                 // 更新计数器
-                getHashTable(0).setUsed(getHashTable(0).getUsed() - 1);
-                getHashTable(1).setUsed(getHashTable(1).getUsed() + 1);
+                hashTable0.setUsed(hashTable0.getUsed() - 1);
+                hashTable1.setUsed(hashTable1.getUsed() + 1);
 
                 // 继续处理下个节点
-                entry.setAddress(nextde.getAddress());
+                if (nextde == null)
+                    entry = null;
+                else
+                    entry.setAddress(nextde.getAddress());
             }
             // 将刚迁移完的哈希表索引的指针设为空
-            getHashTable(0).getTable()[getRehashIdx()].setAddress(0);
+            hashTable0.setEntryPoint(getRehashIdx(), 0);
+            //            entries0[getRehashIdx()].setEntry(null);
+            //            entries0[getRehashIdx()].setAddress(0);
 
             // 更新 rehash 索引
             setRehashIdx(getRehashIdx() + 1);
@@ -1257,7 +1277,7 @@ public class UnsafeMap extends UnsafeObject {
         int used = getHashTable(0).getUsed();
         int size = getHashTable(0).getSize();
 
-        // 如果字典（的 0 号哈希表）为空，那么创建并返回初始化大小的 0 号哈希表
+        // 如果字典（0 号哈希表）为空，那么创建并返回初始化大小的 0 号哈希表
         if (size == 0)
             return expand(RedisConstant.DICT_HT_INITIAL_SIZE);
 
@@ -1267,7 +1287,7 @@ public class UnsafeMap extends UnsafeObject {
         if ((used >= size && RedisConstant.DICT_CAN_RESIZE) || (used / size
                 > RedisConstant.DICT_FORCE_RESIZE_RATIO)) {
             // 新哈希表的大小至少是目前已使用节点数的两倍
-            return expand(getHashTable(0).getUsed() * 2);
+            return expand(used * 2);
         }
 
         return true;
@@ -1313,11 +1333,12 @@ public class UnsafeMap extends UnsafeObject {
         // 计算 key 的哈希值
         int h = hashKey(key);
         for (int table = 0; table <= 1; table++) {
+            UnsafeHashTable hashTable = getHashTable(table);
             // 计算索引值
-            idx = h & getHashTable(table).getSizeMask();
+            idx = h & hashTable.getSizeMask();
 
             // 查找 key 是否存在
-            UnsafeEntry entry = getHashTable(table).getEntry(idx);
+            UnsafeEntry entry = hashTable.getEntry(idx);
             while (entry != null) {
                 if (compareKeys(key, entry.getKey()))
                     return -1;
@@ -1340,7 +1361,7 @@ public class UnsafeMap extends UnsafeObject {
      *
      * @return
      */
-    private static boolean _init(UnsafeMap d, Object type, Object privData) {
+    private static boolean _init(UnsafeDict d, Type type, UnsafeObject privData) {
         // 初始化两个哈希表的各项属性值，但暂时还不分配内存给哈希表数组
         //        d.setHashTable(0, new UnsafeHashTable(d.getAddress() + Unsafe.ARRAY_INT_INDEX_SCALE * 2));
         //        d.setHashTable(1, new UnsafeHashTable(
@@ -1349,10 +1370,10 @@ public class UnsafeMap extends UnsafeObject {
         _reset(d.getHashTable(0));
         _reset(d.getHashTable(1));
 
-        // 设置类型特定函数 todo
-        //        d.setType(type);
-        // 设置私有数据 todo
-        //        d.setPrivData(privData);
+        // 设置类型特定函数
+        d.setType(type);
+        // 设置私有数据
+        d.setPrivData(privData);
 
         // 设置哈希表 rehash 状态
         d.setRehashIdx(-1);
@@ -1388,17 +1409,14 @@ public class UnsafeMap extends UnsafeObject {
 
     // 释放给定字典节点的值
     private void freeVale(UnsafeEntry entry) {
-        //        if (getType() != null) {
-        //todo
-        //            getType().valDestructor(getPrivData(), entry.getValue());
-        //        }
+        if (getType() != null)
+            getType().valDestructor(getPrivData(), entry.getValue());
     }
 
     // 设置给定字典节点的键
     private void setKey(UnsafeEntry entry, UnsafeObject key) {
         if (getType() != null) {
-            //todo
-            //            entry.setKey(getType().keyDup(getPrivData(), key));
+            entry.setKey(getType().keyDup(getPrivData(), key));
         } else {
             entry.setKey(key);
         }
@@ -1407,8 +1425,7 @@ public class UnsafeMap extends UnsafeObject {
     // 设置给定字典节点的值
     private void setValue(UnsafeEntry entry, UnsafeObject value) {
         if (getType() != null) {
-            //todo
-            //            entry.setValue(getType().valDup(getPrivData(), value));
+            entry.setValue(getType().valDup(getPrivData(), value));
         } else {
             entry.setValue(value);
         }
@@ -1426,23 +1443,21 @@ public class UnsafeMap extends UnsafeObject {
 
     // 释放给定字典节点的键
     private void freeKey(UnsafeEntry entry) {
-        //todo
-        //        if (getType() != null)
-        //            getType().keyDestructor(getPrivData(), entry.getKey());
+        if (getType() != null)
+            getType().keyDestructor(getPrivData(), entry.getKey());
     }
 
     // 比对两个键
     private boolean compareKeys(UnsafeObject key1, UnsafeObject key2) {
-        //        return getType() != null ? getType().keyCompare(getPrivData(), key1, key2) : (key1 == key2);
-        //todo
-        return key1.getAddress() == key2.getAddress();
+        return getType() != null ?
+                getType().keyCompare(getPrivData(), key1, key2) :
+                (key1.getAddress() == key2.getAddress());
     }
 
     // 计算给定键的哈希值
     private int hashKey(UnsafeObject key) {
-        //todo
         //        return getType().hashFunction(key);
-        return 0;
+        return 0;//todo
     }
 
     // 返回获取给定节点的键

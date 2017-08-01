@@ -12,11 +12,13 @@
 
     <modules>
         <module>jredis-datastruct</module>
+        <module>jredis-database</module>
     </modules>
 
     <properties>
         <javaVersion>1.8</javaVersion>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jredis-datastruct.version>0.0.1-SNAPSHOT</jredis-datastruct.version>
         <log4j-core.version>2.3</log4j-core.version>
         <log4j-slf4j-impl.version>2.3</log4j-slf4j-impl.version>
         <slf4j-api.version>1.7.12</slf4j-api.version>
@@ -25,6 +27,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.mycat</groupId>
+                <artifactId>jredis-datastruct</artifactId>
+                <version>${jredis-datastruct.version}</version>
+            </dependency>
+
             <!-- Logging -->
             <dependency>
                 <groupId>org.slf4j</groupId>

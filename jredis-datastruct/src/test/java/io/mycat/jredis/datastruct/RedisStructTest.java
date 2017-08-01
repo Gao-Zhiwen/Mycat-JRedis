@@ -1,7 +1,7 @@
 package io.mycat.jredis.datastruct;
 
-import io.mycat.jredis.datastruct.redis.UnsafeMap;
-import io.mycat.jredis.datastruct.redis.UnsafeString;
+import io.mycat.jredis.datastruct.redis.UnsafeDict;
+import io.mycat.jredis.datastruct.redis.UnsafeSds;
 import io.mycat.jredis.datastruct.util.MemoryManager;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,21 +18,21 @@ public class RedisStructTest {
     }
 
     @Test public void stringTest() {
-        UnsafeString unsafeString = new UnsafeString();
-        long address = MemoryManager.malloc(unsafeString.sizeOf());
-        unsafeString.setAddress(address);
-        unsafeString.setValue("hello".toCharArray());
-        System.out.println(unsafeString.getValue());
+        UnsafeSds unsafeSds = new UnsafeSds();
+        long address = MemoryManager.malloc(unsafeSds.sizeOf());
+        unsafeSds.setAddress(address);
+        unsafeSds.setValue("hello".toCharArray());
+        System.out.println(unsafeSds.getValue());
     }
 
     @Test public void mapCreateTest() {
-        UnsafeMap map = UnsafeMap.dictCreate(null, null);
+        UnsafeDict map = UnsafeDict.dictCreate(null, null);
         map.setIterators(1);
         System.out.println(map.getIterators());
         System.out.println(map.getRehashIdx());
 
-        UnsafeMap.UnsafeHashTable table1 = map.getHashTable(0);
-        UnsafeMap.UnsafeHashTable table2 = map.getHashTable(1);
+        UnsafeDict.UnsafeHashTable table1 = map.getHashTable(0);
+        UnsafeDict.UnsafeHashTable table2 = map.getHashTable(1);
         System.out.println(table1.getSize());
         System.out.println(table1.getTable());
         System.out.println(table2.getSizeMask());
@@ -44,10 +44,20 @@ public class RedisStructTest {
     }
 
     @Test public void mapAddTest() {
-        UnsafeMap map = UnsafeMap.dictCreate(null, null);
-        UnsafeObject key = UnsafeString.strNew("hello".toCharArray());
-        UnsafeObject value = UnsafeString.strNew("world".toCharArray());
-        map.add(key, value);
+        UnsafeDict map = UnsafeDict.dictCreate(null, null);
+        map.add(UnsafeSds.sdsNew("hello1".toCharArray()), UnsafeSds.sdsNew("world1".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello2".toCharArray()), UnsafeSds.sdsNew("world2".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello3".toCharArray()), UnsafeSds.sdsNew("world3".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello4".toCharArray()), UnsafeSds.sdsNew("world4".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello5".toCharArray()), UnsafeSds.sdsNew("world5".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello6".toCharArray()), UnsafeSds.sdsNew("world6".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello7".toCharArray()), UnsafeSds.sdsNew("world7".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello8".toCharArray()), UnsafeSds.sdsNew("world8".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello9".toCharArray()), UnsafeSds.sdsNew("world9".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello10".toCharArray()),
+                UnsafeSds.sdsNew("world10".toCharArray()));
+        map.add(UnsafeSds.sdsNew("hello11".toCharArray()),
+                UnsafeSds.sdsNew("world11".toCharArray()));
         System.out.println(map);
     }
 }

@@ -14,7 +14,7 @@ import java.util.Arrays;
  * @date: 23/07/2017
  * @author: gaozhiwen
  */
-public class UnsafeString extends UnsafeObject {
+public class UnsafeSds extends UnsafeObject {
     //    private int length;//已经使用的char长度 offset:0
     //    private int free;//剩余空间 offset:int
     //    private char[] value;//数据段 offset:int*2
@@ -32,7 +32,7 @@ public class UnsafeString extends UnsafeObject {
     }
 
     @Override public String toString() {
-        return "UnsafeString{address=" + address +
+        return "UnsafeSds{address=" + address +
                 ", length=" + getLength() +
                 ", free=" + getFree() +
                 ", value=" + Arrays.toString(getValue()) +
@@ -90,25 +90,25 @@ public class UnsafeString extends UnsafeObject {
      * @param initLen 初始化字符串的长度
      * @return 创建成功返回 sdshdr 相对应的 sds，创建失败返回 NULL
      */
-    public static UnsafeString strNewLen(char[] init, int initLen) {
-        UnsafeString unsafeString = new UnsafeString();
-        long address = MemoryManager.malloc(unsafeString.sizeOf(initLen));
+    public static UnsafeSds sdsNewLen(char[] init, int initLen) {
+        UnsafeSds unsafeSds = new UnsafeSds();
+        long address = MemoryManager.malloc(unsafeSds.sizeOf(initLen));
 
         // 内存分配失败，返回
         if (address == 0) {
             return null;
         }
 
-        unsafeString.setAddress(address);
+        unsafeSds.setAddress(address);
 
-        unsafeString.setFree(0);// 新 sds 不预留任何空间 free
-        unsafeString.setLength(initLen);// 设置初始化长度 len
+        unsafeSds.setFree(0);// 新 sds 不预留任何空间 free
+        unsafeSds.setLength(initLen);// 设置初始化长度 len
         if (initLen >= 0 && init != null) {
             // 如果有指定初始化内容，将它们复制到 sdshdr 的 buf 中
-            unsafeString.setValue(init, initLen);
+            unsafeSds.setValue(init, initLen);
         }
 
-        return unsafeString;
+        return unsafeSds;
     }
 
     /**
@@ -116,8 +116,8 @@ public class UnsafeString extends UnsafeObject {
      *
      * @return 创建成功返回 sdshdr 相对应的 sds，创建失败返回 NULL
      */
-    public static UnsafeString strEmp() {
-        return strNewLen(null, 0);
+    public static UnsafeSds sdsEmp() {
+        return sdsNewLen(null, 0);
     }
 
     /**
@@ -126,9 +126,9 @@ public class UnsafeString extends UnsafeObject {
      * @param init 如果输入为 NULL ，那么创建一个空白 sds，否则，新创建的 sds 中包含和 init 内容相同字符串
      * @return 创建成功返回 sdshdr 相对应的 sds，创建失败返回 NULL
      */
-    public static UnsafeString strNew(final char[] init) {
+    public static UnsafeSds sdsNew(final char[] init) {
         int initLen = (init == null) ? 0 : init.length;
-        return strNewLen(init, initLen);
+        return sdsNewLen(init, initLen);
     }
 
     /**
@@ -137,14 +137,14 @@ public class UnsafeString extends UnsafeObject {
      * @param s
      * @return 创建成功返回输入 sds 的副本，创建失败返回 NULL
      */
-    public static UnsafeString strDup(final UnsafeString s) {
-        return strNewLen(s.getValue(), (s == null) ? 0 : s.getLength());
+    public static UnsafeSds sdsDup(final UnsafeSds s) {
+        return sdsNewLen(s.getValue(), (s == null) ? 0 : s.getLength());
     }
 
     /**
      * 释放给定的 sds
      */
-    public void strFree() {
+    public void sdsFree() {
         MemoryManager.free(this);
     }
 
@@ -152,14 +152,14 @@ public class UnsafeString extends UnsafeObject {
      * 在不释放 SDS 的字符串空间的情况下，
      * 重置 SDS 所保存的字符串为空字符串。
      */
-    public void strClear() {
+    public void sdsClear() {
         // 重新计算属性 free += len, len = 0;  设置free的值
         this.setFree(this.getFree() + this.getLength());
         //设置len的值
         this.setLength(0);
     }
 
-    public UnsafeString makeRoomFor(int addLen) {
+    public UnsafeSds makeRoomFor(int addLen) {
         // 目前的空余空间已经足够，无须再进行扩展，直接返回
         if (this.getFree() >= addLen)
             return this;
@@ -189,7 +189,7 @@ public class UnsafeString extends UnsafeObject {
         UnsafeUtil.getUnsafe().copyMemory(null, this.getAddress(), null, newAdd, sizeOf(len));
         MemoryManager.free(this);
 
-        UnsafeString str = new UnsafeString();
+        UnsafeSds str = new UnsafeSds();
         str.setAddress(newAdd);
 
         // 更新 sds 的空余长度 free

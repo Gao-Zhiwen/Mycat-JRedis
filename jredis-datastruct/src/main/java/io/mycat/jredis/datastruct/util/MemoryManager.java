@@ -81,7 +81,7 @@ public class MemoryManager {
         free(obj.getAddress(), obj.freeSize());
     }
 
-    private static void free(long address, int length) {
+    public static void free(long address, int length) {
         LinkedBlockingDeque<Long> deque = fragments.get(length);
         if (deque == null) {
             deque = new LinkedBlockingDeque();
